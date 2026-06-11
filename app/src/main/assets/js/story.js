@@ -409,6 +409,144 @@ const STORY_CHAPTERS = [
     ],
     ending: 'empire',
   },
+
+  // ========== GANG MISSIONEN ==========
+  {
+    id: 'gang_mission_1',
+    title: 'Kapitel 4 – Der erste Auftrag',
+    bg: 'linear-gradient(180deg,#1a0404 0%,#080202 100%)',
+    scenes: [
+      { speaker:'Marco', portrait:'marco', text:'Du hast Talent, das muss ich zugeben. Ich habe einen kleinen Auftrag. Eine Tasche wird gebracht. Du gibst sie weiter. Keine Fragen.' },
+      { speaker:'Du', portrait:'player', text:'Eine Tasche. Und wenn ich frage, was drin ist?' },
+      { speaker:'Marco', portrait:'marco', text:'Dann stellen wir fest, ob du klug bist. 300 € für zwanzig Minuten Arbeit. Entscheid dich.' },
+    ],
+    choices: [
+      { label:'Annehmen', tag:'gang', tagClass:'choice-gang', desc:'Du nimmst den Auftrag. Das Geld ist verlockend.', effect:{ gangTrust:+2, morality:-2, money:300 }, next:'gang_mission_1_done' },
+      { label:'Ablehnen', tag:'ehrlich', tagClass:'choice-honest', desc:'Das geht zu weit.', effect:{ gangTrust:-1, morality:+1 }, gotoGame:true },
+    ],
+  },
+  {
+    id:'gang_mission_1_done',
+    title:'Kapitel 4 – Erledigt',
+    bg:'linear-gradient(180deg,#1a0404 0%,#080202 100%)',
+    scenes:[
+      { speaker:'Marco', portrait:'marco', text:'Sauber. Kein Drama, kein Chaos. Genau wie ich es mag. Du bist nützlich.' },
+      { speaker:'Nonna', portrait:'nonna', text:'*flüstert* Bambino… ich habe gesehen, was du übergeben hast. Ich frage nicht. Aber sei vorsichtig.' },
+    ],
+    gotoGame:true, gangEvent:'mission1_done',
+  },
+
+  {
+    id:'gang_mission_2',
+    title:'Kapitel 4 – Tiefer rein',
+    bg:'linear-gradient(180deg,#1a0404 0%,#080202 100%)',
+    scenes:[
+      { speaker:'Marco', portrait:'marco', text:'Der nächste Schritt. Unter deinem Laden – genauer unter dem Büro – gibt es einen Keller. Dein Onkel hat ihn gebaut. Zeit, ihn zu nutzen.' },
+      { speaker:'Du', portrait:'player', text:'Was? Ein Keller? Ich wusste nichts davon.' },
+      { speaker:'Marco', portrait:'marco', text:'Giovanni hat vieles vor dir geheimgehalten. Geh in dein Büro. Schau hinter den Aktenschrank. Die Kombination ist 4-7-2.' },
+      { speaker:'Nonna', portrait:'nonna', text:'*erschrocken* Der Keller… Bambino, das wollte ich dir nie zeigen müssen.' },
+    ],
+    gotoGame:true, storyFlag:'lab_unlocked', gangEvent:'lab_revealed',
+  },
+
+  {
+    id:'gang_mission_3',
+    title:'Kapitel 5 – Das Netz',
+    bg:'linear-gradient(180deg,#1a0404 0%,#080202 100%)',
+    scenes:[
+      { speaker:'Marco', portrait:'marco', text:'La Famiglia Bar ist unsere Zentrale. Komm heute Nacht dorthin. Ich stelle dich den anderen vor.' },
+      { speaker:'Du', portrait:'player', text:'Den anderen?' },
+      { speaker:'Marco', portrait:'marco', text:'Wir sind keine kleinen Fische. Russoni kontrolliert fünf Bezirke. Du bist jetzt Teil davon. Oder du bist ein Problem.' },
+    ],
+    choices:[
+      { label:'Zur Bar gehen', tag:'gang', tagClass:'choice-gang', desc:'Du wirst offiziell Teil der Russoni-Organisation.', effect:{ gangTrust:+3, morality:-3 }, next:'gang_official' },
+      { label:'Jetzt reicht es', tag:'ehrlich', tagClass:'choice-honest', desc:'Das ist zu weit gegangen.', effect:{ morality:+2, gangTrust:-3 }, next:'gang_escape_plan' },
+    ],
+  },
+  {
+    id:'gang_official',
+    title:'Kapitel 5 – Parte della Famiglia',
+    bg:'linear-gradient(180deg,#1a0404 0%,#080202 100%)',
+    scenes:[
+      { speaker:'Marco', portrait:'marco', text:'Willkommen, fratello. Ab heute läuft das Geld durch deinen Laden. Niemand fragt, woher es kommt.' },
+      { speaker:'Du', portrait:'player', text:'Wie viel weiß die Polizei?' },
+      { speaker:'Marco', portrait:'marco', text:'Bauer? Den haben wir im Griff. Mach dir keine Sorgen.' },
+    ],
+    gotoGame:true, gangEvent:'official_member',
+  },
+  {
+    id:'gang_escape_plan',
+    title:'Kapitel 5 – Der Ausweg',
+    bg:'linear-gradient(180deg,#1a0404 0%,#080202 100%)',
+    scenes:[
+      { speaker:'Du', portrait:'player', text:'Ich muss hier raus. Aber wie? Marco hat Leute überall.' },
+      { speaker:'Nonna', portrait:'nonna', text:'Inspektor Bauer. Er hat mir seine Karte gegeben. Er will doch helfen, oder?' },
+      { speaker:'Du', portrait:'player', text:'Wenn ich zu ihm gehe, ist kein Zurück mehr möglich.' },
+      { speaker:'Nonna', portrait:'nonna', text:'Manchmal gibt es keinen Rückweg, Bambino. Nur nach vorne.' },
+    ],
+    gotoGame:true, storyFlag:'escape_planned',
+  },
+
+  // ========== POLIZEI MISSIONEN ==========
+  {
+    id:'police_mission_1',
+    title:'Kapitel 4 – Kronzeuge',
+    bg:'linear-gradient(180deg,#040d1a 0%,#020608 100%)',
+    scenes:[
+      { speaker:'Inspektor Bauer', portrait:'bauer', text:'Sie haben Mut bewiesen, zur Polizei zu kommen. Ich brauche Ihre Hilfe. Beobachten Sie La Famiglia Bar. Wann kommen die Männer? Wie viele?' },
+      { speaker:'Du', portrait:'player', text:'Sie wollen mich als Spitzel.' },
+      { speaker:'Inspektor Bauer', portrait:'bauer', text:'Als Zeugen. Großer Unterschied. Und wenn es vorbei ist, läuft Ihr Laden ohne Schatten. Versprochen.' },
+    ],
+    choices:[
+      { label:'Helfen', tag:'polizei', tagClass:'choice-police', desc:'Du wirst Bauers Informant.', effect:{ policeTrust:+3, gangTrust:-2, morality:+2 }, next:'police_mission_1_done' },
+      { label:'Ablehnen', tag:'clever', tagClass:'choice-clever', desc:'Zu riskant.', effect:{ policeTrust:-1 }, gotoGame:true },
+    ],
+  },
+  {
+    id:'police_mission_1_done',
+    title:'Kapitel 4 – Informationen',
+    bg:'linear-gradient(180deg,#040d1a 0%,#020608 100%)',
+    scenes:[
+      { speaker:'Inspektor Bauer', portrait:'bauer', text:'Gut. Donnerstag Nacht. Sieben Männer. Das reicht für einen Haftbefehl. Sie haben uns sehr geholfen.' },
+      { speaker:'Du', portrait:'player', text:'Weiß Marco, wer Sie informiert hat?' },
+      { speaker:'Inspektor Bauer', portrait:'bauer', text:'Nicht wenn wir es richtig machen. Verhalten Sie sich normal. Ich melde mich.' },
+    ],
+    gotoGame:true, policeEvent:'informant',
+  },
+
+  // ========== FRITZE DER ALTE MANN ==========
+  {
+    id:'fritz_secret',
+    title:'Ein alter Bekannter',
+    bg:'linear-gradient(180deg,#1a1a0a 0%,#0d0d04 100%)',
+    scenes:[
+      { speaker:'Alter Fritz', portrait:'unknown', text:'Du bist Giovannis Neffe, oder? Ich erkenne die Augen. Er hat mir mal das Leben gerettet, weißt du.' },
+      { speaker:'Du', portrait:'player', text:'Was? Wie?' },
+      { speaker:'Alter Fritz', portrait:'unknown', text:'Lange Geschichte. Aber ich schulde ihm etwas. Und jetzt – schau mal unter der Parkbank. Hinten links. Dein Onkel hat mir das zur Aufbewahrung gegeben.' },
+      { speaker:'Du', portrait:'player', text:'*findet einen kleinen Schlüssel mit Anhänger: \"VN7-K\"*' },
+      { speaker:'Alter Fritz', portrait:'unknown', text:'Keine Ahnung was es ist. Aber er sagte, du weißt es wenn du es brauchst.' },
+    ],
+    gotoGame:true, storyFlag:'key_found',
+  },
+
+  // ========== BOSS ROMANO (Oberboss) ==========
+  {
+    id:'romano_intro',
+    title:'Kapitel 6 – Der echte Boss',
+    bg:'linear-gradient(180deg,#1a0404 0%,#050104 100%)',
+    scenes:[
+      { speaker:'Romano', portrait:'unknown', text:'*Schwere Schritte. Ein älterer Mann in teuren Kleidern betritt den Laden nach Geschäftsschluss.*\nSignore Russo. Ich bin Romano. Marco arbeitet für mich.' },
+      { speaker:'Du', portrait:'player', text:'…Wer sind Sie?' },
+      { speaker:'Romano', portrait:'unknown', text:'Der Mann, dem diese Stadt gehört. Ich habe deinen Onkel gekannt. Er war loyal. Bis er es nicht mehr war. Das war sein Fehler.' },
+      { speaker:'Nonna', portrait:'nonna', text:'*flüstert* Madonna...' },
+      { speaker:'Romano', portrait:'unknown', text:'Du hast eine Wahl. Schließ dich uns an – richtig, nicht als Mittelmann. Oder verschwinde aus dieser Stadt. Ganz.' },
+    ],
+    choices:[
+      { label:'Romano dienen', tag:'gang', tagClass:'choice-gang', desc:'Du stiegst auf – bis ganz nach oben ins Kartell.', effect:{ gangTrust:+5, morality:-5 }, ending:'gang' },
+      { label:'Ablehnen und fliehen', tag:'ehrlich', tagClass:'choice-honest', desc:'Du rufst Bauer an. Jetzt, sofort.', effect:{ policeTrust:+5, morality:+3 }, ending:'police' },
+      { label:'Romano überlisten', tag:'clever', tagClass:'choice-clever', desc:'Du spielst mit, aber hast einen Plan.', effect:{ morality:0 }, ending:'empire' },
+    ],
+  },
 ];
 
 // Story Engine

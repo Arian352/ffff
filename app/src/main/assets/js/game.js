@@ -256,6 +256,29 @@ const Game = (() => {
       // Update world
       World.update(delta);
 
+      // Update city (building entrances)
+      if (typeof City !== 'undefined') {
+        const cityEvent = City.update(delta, Player.getPosition());
+        if (cityEvent && cityEvent.entered && !document.getElementById('overlay-management').classList.contains('hidden') === false) {
+          handleBuildingEnter(cityEvent.entered);
+        }
+      }
+
+      // Update AI citizens
+      if (typeof AI !== 'undefined') {
+        AI.update(delta, S.timeOfDay, Player.getPosition());
+        // Check for nearby citizen to talk to
+        if (!nearbyNPC) {
+          const aiNPC = AI.getNearbyNPC(Player.getPosition(), 2.2);
+          if (aiNPC) {
+            nearbyNPC = { isCitizen: true, citizen: aiNPC, storyChapter: 0, def: null };
+          }
+        }
+      }
+
+      // Update secret lab
+      if (typeof SecretLab !== 'undefined') SecretLab.update(delta, Player.getPosition());
+
       // Render
       renderer.render(scene, camera);
 
@@ -268,6 +291,18 @@ const Game = (() => {
     const btnInteract = document.getElementById('btn-interact');
     if (btnInteract) {
       btnInteract.addEventListener('click', handleInteract);
+    }
+
+    // Init city, AI, lab and dialogue if available
+    if (typeof City !== 'undefined') City.init(scene, World.colliders);
+    if (typeof AI !== 'undefined') AI.init(scene, World.ROOM, City && City.LOCATIONS ? City.LOCATIONS : {});
+    if (typeof SecretLab !== 'undefined') {
+      SecretLab.init(scene, World.colliders, World.ROOM);
+      if (S.storyFlags && S.storyFlags.lab_unlocked) SecretLab.unlock(scene);
+    }
+    if (typeof Dialogue !== 'undefined') {
+      Dialogue.init();
+      Dialogue.setOnClose(() => { if (gameLoopRunning && worldInitialized) { canvas3D_show(); touchControls_show(); } });
     }
   }
 
@@ -305,10 +340,55 @@ const Game = (() => {
   const CHAPTER_MAP = { 3: 'gang_intro', 6: 'police_intro' };
   const NAME_TO_ID  = { 'Nonna':'nonna', 'Marco':'marco', 'Officer Bauer':'bauer', 'Rosa':'rosa' };
 
+  // -------- BUILDING ENTER --------
+  function handleBuildingEnter(buildingId) {
+    const labels = {
+      frischmarkt: '🛒 Frischmarkt – Zutaten kaufen',
+      baumarkt: '🔨 Baumarkt – Upgrades kaufen',
+      la_famiglia: '🍷 La Famiglia Bar',
+      police_station: '🚔 Polizeipräsidium',
+    };
+    if (buildingId === 'frischmarkt' || buildingId === 'baumarkt') {
+      showToast(`${labels[buildingId] || buildingId} betreten`);
+      openManagement();
+      document.querySelectorAll('.mgmt-tab').forEach(b => b.classList.remove('active'));
+      const tab = buildingId === 'frischmarkt' ? 'shop' : 'build';
+      const activeTab = document.querySelector(`.mgmt-tab[data-tab="${tab}"]`);
+      if (activeTab) activeTab.classList.add('active');
+      renderManagementTab(tab);
+    } else if (buildingId === 'la_famiglia' && S.day >= 3) {
+      showToast('La Famiglia Bar – Hier hängt Marcos Crew ab');
+    } else if (buildingId === 'police_station') {
+      showToast('Polizeipräsidium – Inspektor Bauer arbeitet hier');
+    } else {
+      showToast(labels[buildingId] || `${buildingId} betreten`);
+    }
+  }
+
   // -------- INTERACT --------
   function handleInteract() {
     if (!nearbyNPC) return;
     const npc = nearbyNPC;
+
+    // Citizen NPC → open dialogue overlay
+    if (npc.isCitizen && npc.citizen) {
+      touchControls_hide();
+      if (typeof Dialogue !== 'undefined') {
+        Dialogue.open({
+          name: npc.citizen.name,
+          personality: npc.citizen.personality,
+          dialogLines: npc.citizen.dialogLines || ['Hallo.'],
+          relationship: 50,
+          isGangMember: npc.citizen.isGangMember || false,
+          isPolice: npc.citizen.isPolice || false,
+        });
+      } else {
+        showToast(`${npc.citizen.name}: "${(npc.citizen.dialogLines||['Hallo.'])[0]}"`);
+        setTimeout(() => { canvas3D_show(); touchControls_show(); }, 1500);
+      }
+      return;
+    }
+
     const chapterNum = npc.storyChapter || (npc.def && npc.def.storyChapter) || 0;
     const chapterId  = CHAPTER_MAP[chapterNum];
     if (!chapterId) return;
@@ -323,6 +403,15 @@ const Game = (() => {
       NPCs.respawn(S);
     });
   }
+
+  // expose gameState for dialogue.js
+  window.gameState = {
+    get gangTrust()   { return S ? S.gangTrust : 0; },
+    set gangTrust(v)  { if (S) { S.gangTrust = clamp(v, -5, 5); save(); } },
+    get policeTrust() { return S ? S.policeTrust : 0; },
+    set policeTrust(v){ if (S) { S.policeTrust = clamp(v, -5, 5); save(); } },
+    get day()         { return S ? S.day : 1; },
+  };
 
   // -------- HUD 3D --------
   function updateHUD3D() {
@@ -710,12 +799,66 @@ const Game = (() => {
       Story.playChapter('police_intro', () => { canvas3D_show(); touchControls_show(); });
       return;
     }
-    if (S.day >= 14 && S.finalDecisionUnlocked && !S.storyFlags.final_done) {
+    // Gang mission chain
+    if (S.day === 5 && S.gangEvent === 'paid' && !S.storyFlags.gang_m1_triggered) {
+      S.storyFlags.gang_m1_triggered = true; save();
+      touchControls_hide();
+      Story.playChapter('gang_mission_1', () => { canvas3D_show(); touchControls_show(); });
+      return;
+    }
+    if (S.day === 8 && S.gangEvent === 'mission1_done' && !S.storyFlags.gang_m2_triggered) {
+      S.storyFlags.gang_m2_triggered = true; save();
+      touchControls_hide();
+      Story.playChapter('gang_mission_2', () => { canvas3D_show(); touchControls_show();
+        if (typeof SecretLab !== 'undefined') SecretLab.unlock(World.scene);
+        showToast('🔓 Geheimkeller freigeschaltet! Büro → hinter dem Aktenschrank.');
+      });
+      return;
+    }
+    if (S.day === 11 && (S.gangEvent === 'lab_revealed' || S.gangEvent === 'mission1_done') && !S.storyFlags.gang_m3_triggered) {
+      S.storyFlags.gang_m3_triggered = true; save();
+      touchControls_hide();
+      Story.playChapter('gang_mission_3', () => { canvas3D_show(); touchControls_show(); });
+      return;
+    }
+    // Police informant chain
+    if (S.day === 8 && S.policeEvent === 'info' && !S.storyFlags.police_m1_triggered) {
+      S.storyFlags.police_m1_triggered = true; save();
+      touchControls_hide();
+      Story.playChapter('police_mission_1', () => { canvas3D_show(); touchControls_show(); });
+      return;
+    }
+    // Fritz (old man) – day 4 in park
+    if (S.day === 4 && !S.storyFlags.fritz_met) {
+      S.storyFlags.fritz_met = true; save();
+      touchControls_hide();
+      Story.playChapter('fritz_secret', () => { canvas3D_show(); touchControls_show();
+        showToast('🔑 Schlüssel gefunden! Was öffnet er?');
+      });
+      return;
+    }
+    // Romano (big boss) – day 15 for gang path
+    if (S.day === 15 && (S.gangEvent === 'official_member' || S.gangEvent === 'lab_revealed') && !S.storyFlags.romano_triggered) {
+      S.storyFlags.romano_triggered = true; save();
+      touchControls_hide();
+      Story.playChapter('romano_intro', () => { canvas3D_show(); touchControls_show(); });
+      return;
+    }
+    if (S.day >= 14 && S.finalDecisionUnlocked && !S.storyFlags.final_done && !S.storyFlags.romano_triggered) {
       S.storyFlags.final_done = true;
       save();
       touchControls_hide();
       Story.playChapter('final_decision', () => { canvas3D_show(); touchControls_show(); });
       return;
+    }
+
+    // Passive lab income
+    if (typeof SecretLab !== 'undefined' && SecretLab.isUnlocked()) {
+      SecretLab.triggerDayTick && SecretLab.triggerDayTick();
+      const labState = SecretLab.getState ? SecretLab.getState() : {};
+      const labIncome = labState.moneyReady ? 50 * (labState.printerUpgraded ? 2 : 1) : 0;
+      if (labIncome > 0 && labState.moneyReady) { /* cleared in doAction */ }
+      if (labIncome > 0) { S.money += labIncome; showToast(`💰 Labor-Einnahmen: +${labIncome}€`); }
     }
 
     if (S.money < 0) { S.money = 0; showToast('Achtung: Geld aufgebraucht!'); }
