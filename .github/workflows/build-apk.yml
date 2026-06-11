@@ -1,0 +1,132 @@
+name: Build Pizza Empire APK
+
+on:
+  push:
+    branches: [ "claude/pizza-empire-game-dev-kyye97", "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+
+      - name: Install Android platform & build tools
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
+
+      - name: Download Gradle Wrapper JAR
+        run: |
+          mkdir -p gradle/wrapper
+          curl -fsSL \
+            "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar
+
+      - name: Create gradlew script
+        run: |
+          cat > gradlew << 'GRADLEW'
+          #!/bin/sh
+          # Gradle wrapper shell script
+          APP_HOME="$(cd "$(dirname "$0")" && pwd)"
+          CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+          exec "$JAVA_HOME/bin/java" \
+            -classpath "$CLASSPATH" \
+            org.gradle.wrapper.GradleWrapperMain "$@"
+          GRADLEW
+          chmod +x gradlew
+
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+
+      - name: Build Release APK (unsigned)
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pizza-empire-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pizza-empire-release-unsigned
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Pizza Empire v1.0.${{ github.run_number }} \U0001F355"
+          body: |
+            ## Pizza Empire – Dein Pizzaladen, deine Entscheidungen 🍕
+
+            ### Installation
+            1. **pizza-empire-debug.apk** unten herunterladen
+            2. Auf dein Android-Gerät übertragen
+            3. Einstellungen → Sicherheit → **Unbekannte Quellen** aktivieren
+            4. APK installieren und spielen!
+
+            ---
+
+            ### Features
+            - 🎭 **Lange Geschichte** mit Gangster-Krimi-Plot (4 verschiedene Enden)
+            - 🍕 **Interaktive Pizzaküche** – Zutaten wählen & backen
+            - 🔨 **Renovierung** – Öfen, Einrichtung, Rezepte & mehr upgraden
+            - 👥 **Personal einstellen** – Koch, Kellnerin, Fahrer
+            - 📈 **Wirtschafts-Management** – Einnahmen, Ausgaben, Schutzgeld?
+            - 💾 **Automatisches Speichern** – Fortschritt nie verloren
+            - 🎨 **Handgezeichnete Vektor-Portraits** für alle Charaktere
+            - 📱 **Vollbild, werbefrei**, sauber optimiert
+
+            ### Geschichte
+            Du erbst einen heruntergekommenen Pizzaladen. Nach und nach erfährst du,
+            dass eine lokale Gang den Laden als Fassade benutzt hat. Entscheide:
+            Mit der Gang kooperieren? Die Polizei informieren? Beide austricksen?
+            Oder einfach ein ehrliches Imperium aufbauen?
+
+            **4 verschiedene Enden warten auf dich.**
+
+            Build #${{ github.run_number }}
+          files: app/build/outputs/apk/debug/app-debug.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

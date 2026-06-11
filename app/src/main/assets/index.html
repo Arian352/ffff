@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Pizza Empire</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ TITELBILDSCHIRM ============ -->
+<div id="screen-title" class="screen active">
+  <div class="title-bg">
+    <div class="title-skyline"></div>
+    <div class="title-glow"></div>
+  </div>
+  <div class="title-content">
+    <div class="title-pizza" id="title-pizza"></div>
+    <h1 class="game-logo"><span>PIZZA</span><span class="logo-empire">EMPIRE</span></h1>
+    <p class="game-tagline">Teig. Geld. Geheimnisse.</p>
+    <div class="title-buttons">
+      <button id="btn-continue" class="btn btn-gold hidden">Weiterspielen</button>
+      <button id="btn-newgame" class="btn btn-outline">Neues Spiel</button>
+    </div>
+    <p class="title-save-info hidden" id="title-save-info"></p>
+    <p class="title-version">v1.0 &middot; Spielstand wird automatisch gespeichert</p>
+  </div>
+</div>
+
+<!-- ============ STORY / DIALOG ============ -->
+<div id="screen-story" class="screen">
+  <div class="story-bg" id="story-bg"></div>
+  <div class="story-vignette"></div>
+  <div class="story-chapter" id="story-chapter"></div>
+  <div class="story-box">
+    <div class="story-portrait" id="story-portrait"></div>
+    <div class="story-text-area">
+      <div class="story-speaker" id="story-speaker"></div>
+      <div class="story-text" id="story-text"></div>
+      <div class="story-continue-hint" id="story-hint">Tippen zum Fortfahren&hellip;</div>
+    </div>
+  </div>
+  <div class="story-choices hidden" id="story-choices"></div>
+</div>
+
+<!-- ============ HAUPTSPIEL ============ -->
+<div id="screen-game" class="screen">
+  <header class="hud">
+    <div class="hud-left">
+      <div class="hud-day" id="hud-day">Tag 1</div>
+      <div class="hud-stars" id="hud-stars"></div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-money" id="hud-money">350&nbsp;€</div>
+      <div class="hud-rep" id="hud-rep"></div>
+    </div>
+  </header>
+
+  <main class="game-main" id="game-main">
+    <!-- Tab: Küche / Service -->
+    <section class="tab-panel active" id="tab-service"></section>
+    <!-- Tab: Einkauf -->
+    <section class="tab-panel" id="tab-shop"></section>
+    <!-- Tab: Umbau -->
+    <section class="tab-panel" id="tab-build"></section>
+    <!-- Tab: Büro -->
+    <section class="tab-panel" id="tab-office"></section>
+  </main>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab-btn active" data-tab="service"><span class="tab-ico" data-ico="oven"></span>Küche</button>
+    <button class="tab-btn" data-tab="shop"><span class="tab-ico" data-ico="cart"></span>Einkauf</button>
+    <button class="tab-btn" data-tab="build"><span class="tab-ico" data-ico="hammer"></span>Umbau</button>
+    <button class="tab-btn" data-tab="office"><span class="tab-ico" data-ico="ledger"></span>Büro</button>
+  </nav>
+</div>
+
+<!-- ============ PIZZA-ZUBEREITUNG (Overlay) ============ -->
+<div id="overlay-kitchen" class="overlay hidden">
+  <div class="kitchen-panel">
+    <div class="kitchen-order" id="kitchen-order"></div>
+    <div class="kitchen-pizza-wrap"><div id="kitchen-pizza"></div></div>
+    <div class="kitchen-ingredients" id="kitchen-ingredients"></div>
+    <div class="kitchen-actions">
+      <button class="btn btn-small btn-outline" id="btn-kitchen-reset">Neu belegen</button>
+      <button class="btn btn-small btn-gold" id="btn-kitchen-bake">In den Ofen</button>
+      <button class="btn btn-small btn-outline" id="btn-kitchen-cancel">Zur&uuml;ck</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TAGESABSCHLUSS (Overlay) ============ -->
+<div id="overlay-summary" class="overlay hidden">
+  <div class="summary-panel" id="summary-panel"></div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div id="toast-wrap"></div>
+
+<script src="js/portraits.js"></script>
+<script src="js/story.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
