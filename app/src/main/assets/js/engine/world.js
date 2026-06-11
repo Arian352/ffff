@@ -870,7 +870,14 @@ var World = (function () {
     _renderer.setSize(window.innerWidth, window.innerHeight);
     _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     _renderer.shadowMap.enabled = false;
+    _renderer.setClearColor(0x87CEEB, 1);
     // NO outputEncoding / toneMapping — they break Lambert materials on Android WebView
+
+    // Handle WebGL context loss on Android (app backgrounded)
+    canvas.addEventListener('webglcontextlost', function(e) { e.preventDefault(); }, false);
+    canvas.addEventListener('webglcontextrestored', function() {
+      _renderer.setSize(window.innerWidth, window.innerHeight);
+    }, false);
 
     buildSky();
     buildLighting();

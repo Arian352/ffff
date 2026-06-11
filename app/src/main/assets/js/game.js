@@ -226,21 +226,27 @@ const Game = (() => {
       animId = requestAnimationFrame(loop);
       const delta = Math.min(clock.getDelta(), 0.05);
 
-      // Advance in-game time
-      gameTime += delta * DAY_SPEED;
-      if (gameTime >= 24) { gameTime = 0; }
-      S.timeOfDay = gameTime;
-      World.updateTimeOfDay(gameTime);
+      try {
+        // Advance in-game time
+        gameTime += delta * DAY_SPEED;
+        if (gameTime >= 24) { gameTime = 0; }
+        S.timeOfDay = gameTime;
+        World.updateTimeOfDay(gameTime);
+      } catch(e) {}
 
-      // Update player
-      const colliders = World.colliders;
-      const playerState = Player.update(delta, colliders);
+      let playerState;
+      try {
+        const colliders = World.colliders;
+        playerState = Player.update(delta, colliders);
+      } catch(e) {}
 
-      // Update NPCs
-      const pp = Player.getPosition();
-      const playerVec = new THREE.Vector3(pp.x, pp.y, pp.z);
-      const near = NPCs.update(delta, playerVec, camera);
-      nearbyNPC = near;
+      let near = null;
+      try {
+        const pp = Player.getPosition();
+        const playerVec = new THREE.Vector3(pp.x, pp.y, pp.z);
+        near = NPCs.update(delta, playerVec, camera);
+        nearbyNPC = near;
+      } catch(e) {}
 
       // Show/hide interact prompt
       const prompt = document.getElementById('interact-prompt');
@@ -257,39 +263,35 @@ const Game = (() => {
         }
       }
 
-      // Update world
-      World.update(delta);
+      try { World.update(delta); } catch(e) {}
 
-      // Update city (building entrances)
-      if (typeof City !== 'undefined') {
-        const cityEvent = City.update(delta, Player.getPosition());
-        if (cityEvent && cityEvent.entered && !document.getElementById('overlay-management').classList.contains('hidden') === false) {
-          handleBuildingEnter(cityEvent.entered);
+      try {
+        if (typeof City !== 'undefined') {
+          const cityEvent = City.update(delta, Player.getPosition());
+          if (cityEvent && cityEvent.entered) handleBuildingEnter(cityEvent.entered);
         }
-      }
+      } catch(e) {}
 
-      // Update AI citizens
-      if (typeof AI !== 'undefined') {
-        AI.update(delta, S.timeOfDay, Player.getPosition());
-        // Check for nearby citizen to talk to
-        if (!nearbyNPC) {
-          const aiNPC = AI.getNearbyNPC(Player.getPosition(), 2.2);
-          if (aiNPC) {
-            nearbyNPC = { isCitizen: true, citizen: aiNPC, storyChapter: 0, def: null };
+      try {
+        if (typeof AI !== 'undefined') {
+          AI.update(delta, S.timeOfDay, Player.getPosition());
+          if (!nearbyNPC) {
+            const aiNPC = AI.getNearbyNPC(Player.getPosition(), 2.2);
+            if (aiNPC) nearbyNPC = { isCitizen: true, citizen: aiNPC, storyChapter: 0, def: null };
           }
         }
-      }
+      } catch(e) {}
 
-      // Update secret lab
-      if (typeof SecretLab !== 'undefined') SecretLab.update(delta, Player.getPosition());
+      try { if (typeof SecretLab !== 'undefined') SecretLab.update(delta, Player.getPosition()); } catch(e) {}
 
-      // Audio update
-      if (typeof Audio !== 'undefined') {
-        const moving = !!(playerState && playerState.isMoving);
-        Audio.update(delta, moving);
-      }
+      try {
+        if (typeof GameAudio !== 'undefined') {
+          const moving = !!(playerState && playerState.isMoving);
+          GameGameAudio.update(delta, moving);
+        }
+      } catch(e) {}
 
-      // Render
+      // Always render — even if updates failed
       renderer.render(scene, camera);
 
       // Update HUD
@@ -314,7 +316,7 @@ const Game = (() => {
       Dialogue.init();
       Dialogue.setOnClose(() => { if (gameLoopRunning && worldInitialized) { canvas3D_show(); touchControls_show(); } });
     }
-    if (typeof Audio !== 'undefined') Audio.init();
+    if (typeof GameAudio !== 'undefined') GameAudio.init();
   }
 
   // -------- GAME LOOP (2D fallback) --------
@@ -677,7 +679,7 @@ const Game = (() => {
     const extra = kitchenToppings.filter(t => !required.includes(t)).length;
     const quality = matched / required.length;
     let bonus = 0;
-    if (typeof Audio !== 'undefined') Audio.playPizzaBake();
+    if (typeof GameAudio !== 'undefined') GameAudio.playPizzaBake();
     if (quality === 1 && extra === 0) { bonus = 2; showToast('🍕 Perfekte Pizza! +2€'); }
     else if (quality >= 0.6) showToast('Gute Pizza!');
     else { bonus = -2; showToast('Pizza nicht ganz richtig…'); }
@@ -718,11 +720,11 @@ const Game = (() => {
     const lvl = S.upgrades[key];
     if (lvl >= upg.maxLevel) { showToast('Bereits maximiert!'); return; }
     const cost = upg.costs[lvl];
-    if (S.money < cost) { showToast('Nicht genug Geld!'); if (typeof Audio !== 'undefined') Audio.playError(); return; }
+    if (S.money < cost) { showToast('Nicht genug Geld!'); if (typeof GameAudio !== 'undefined') GameAudio.playError(); return; }
     S.money -= cost;
     S.upgrades[key]++;
     showToast(`${upg.name} → Stufe ${S.upgrades[key]}!`);
-    if (typeof Audio !== 'undefined') Audio.playSuccess();
+    if (typeof GameAudio !== 'undefined') GameAudio.playSuccess();
     updateHUD3D();
     renderManagementTab('build');
     save();
@@ -746,7 +748,7 @@ const Game = (() => {
     S.todayExpenses += staffCost;
     if (S.gangEvent==='paid' && S.day % 30 === 0) { S.money -= 500; showToast('500€ Schutzgeld abgezogen.'); }
     document.getElementById('overlay-management').classList.add('hidden');
-    if (typeof Audio !== 'undefined') Audio.playDayEnd();
+    if (typeof GameAudio !== 'undefined') GameAudio.playDayEnd();
     showSummary(revenue, staffCost);
   }
 

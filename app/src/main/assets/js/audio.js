@@ -1,6 +1,6 @@
 // audio.js — Pizza Empire Sound & Music System
 // Web Audio API — no external files needed, procedurally generated
-var Audio = (function () {
+var GameAudio = (function () {
   'use strict';
 
   var ctx = null;
