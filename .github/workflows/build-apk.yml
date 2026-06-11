@@ -1,4 +1,4 @@
-name: Build Pizza Empire APK
+name: Build Pizza Empire APK (3D Edition)
 
 on:
   push:
@@ -33,6 +33,16 @@ jobs:
             "platforms;android-34" \
             "build-tools;34.0.0"
 
+      - name: Download Three.js r128 (3D engine)
+        run: |
+          mkdir -p app/src/main/assets/js/engine
+          echo "Downloading Three.js r128..."
+          curl -fsSL \
+            "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" \
+            -o app/src/main/assets/js/engine/three.min.js
+          SIZE=$(wc -c < app/src/main/assets/js/engine/three.min.js)
+          echo "Three.js downloaded: ${SIZE} bytes"
+
       - name: Download Gradle Wrapper JAR
         run: |
           mkdir -p gradle/wrapper
@@ -44,7 +54,6 @@ jobs:
         run: |
           cat > gradlew << 'GRADLEW'
           #!/bin/sh
-          # Gradle wrapper shell script
           APP_HOME="$(cd "$(dirname "$0")" && pwd)"
           CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
           exec "$JAVA_HOME/bin/java" \
@@ -65,6 +74,13 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
+      - name: Show asset sizes
+        run: |
+          echo "=== Asset sizes ==="
+          du -sh app/src/main/assets/js/engine/three.min.js
+          du -sh app/src/main/assets/
+          echo "==================="
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace --no-daemon
         env:
@@ -75,17 +91,22 @@ jobs:
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
+      - name: Get APK size
+        run: |
+          ls -lh app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || echo "Debug APK not found"
+          ls -lh app/build/outputs/apk/release/app-release-unsigned.apk 2>/dev/null || echo "Release APK not found"
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: pizza-empire-debug
+          name: pizza-empire-3d-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: pizza-empire-release-unsigned
+          name: pizza-empire-3d-release
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           retention-days: 30
 
@@ -93,36 +114,45 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: "Pizza Empire v1.0.${{ github.run_number }} \U0001F355"
+          tag_name: v2.0.${{ github.run_number }}
+          name: "Pizza Empire 3D v2.0.${{ github.run_number }} \U0001F355"
           body: |
-            ## Pizza Empire – Dein Pizzaladen, deine Entscheidungen 🍕
+            ## Pizza Empire 3D – First Person Restaurant-Crime-Game
 
             ### Installation
-            1. **pizza-empire-debug.apk** unten herunterladen
-            2. Auf dein Android-Gerät übertragen
+            1. `pizza-empire-3d-debug.apk` herunterladen
+            2. Auf Android-Gerät übertragen
             3. Einstellungen → Sicherheit → **Unbekannte Quellen** aktivieren
             4. APK installieren und spielen!
 
             ---
 
-            ### Features
-            - 🎭 **Lange Geschichte** mit Gangster-Krimi-Plot (4 verschiedene Enden)
-            - 🍕 **Interaktive Pizzaküche** – Zutaten wählen & backen
-            - 🔨 **Renovierung** – Öfen, Einrichtung, Rezepte & mehr upgraden
-            - 👥 **Personal einstellen** – Koch, Kellnerin, Fahrer
-            - 📈 **Wirtschafts-Management** – Einnahmen, Ausgaben, Schutzgeld?
-            - 💾 **Automatisches Speichern** – Fortschritt nie verloren
-            - 🎨 **Handgezeichnete Vektor-Portraits** für alle Charaktere
-            - 📱 **Vollbild, werbefrei**, sauber optimiert
+            ### 3D Engine
+            - **Three.js r128** WebGL Renderer
+            - First Person Kamera (Schedule-One-Stil)
+            - Virtueller Joystick links (Bewegen), Wisch rechts (Umschauen)
+            - Komplette 3D-Welt: Straße, Speisesaal, Küche, Büro
+            - Dynamischer Tag/Nacht-Zyklus
+            - Prozedurale Texturen (Ziegel, Holz, Fliesen)
+            - 3D-NPCs mit Idle-Animationen & Namensschildern
 
-            ### Geschichte
-            Du erbst einen heruntergekommenen Pizzaladen. Nach und nach erfährst du,
-            dass eine lokale Gang den Laden als Fassade benutzt hat. Entscheide:
-            Mit der Gang kooperieren? Die Polizei informieren? Beide austricksen?
-            Oder einfach ein ehrliches Imperium aufbauen?
+            ### Story & Gameplay
+            - 🎭 5 Story-Kapitel mit Gangster-Krimi-Plot
+            - 4 verschiedene Enden (ehrlich / Gang / Polizei / Weltreich)
+            - 🍕 Pizza-Küche: Zutaten wählen, backen, Bewertung kassieren
+            - 🔨 6 Upgrade-Typen für Ofen, Einrichtung, Speisesaal
+            - 👥 3 Mitarbeiter einstellbar
+            - 💾 Automatisches Speichern – Fortschritt nie verloren
 
-            **4 verschiedene Enden warten auf dich.**
+            ### Charaktere (alle in 3D)
+            | Charakter | Rolle |
+            |-----------|-------|
+            | Du | First Person Spieler |
+            | Nonna | Immer in der Küche |
+            | Marco Russoni | Gang-Boss (Tag 3) |
+            | Inspektor Bauer | Polizei (Tag 6) |
+            | Rosa | Servicekraft |
+            | Kunden | Zufällige NPCs |
 
             Build #${{ github.run_number }}
           files: app/build/outputs/apk/debug/app-debug.apk

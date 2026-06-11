@@ -8,22 +8,65 @@
 </head>
 <body>
 
+<!-- ============ 3D CANVAS (always rendered) ============ -->
+<canvas id="game-canvas"></canvas>
+
+<!-- ============ TOUCH CONTROLS (shown only in 3D mode) ============ -->
+<div id="touch-controls" class="hidden">
+  <!-- Left: Virtual Joystick -->
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-thumb"></div>
+    </div>
+  </div>
+  <!-- Right: Look area label -->
+  <div id="look-zone"></div>
+  <!-- Interact button (appears when near NPC/object) -->
+  <div id="interact-prompt" class="hidden">
+    <button id="btn-interact">&#x25CF;&nbsp;Sprechen</button>
+  </div>
+  <!-- Menu button bottom right -->
+  <div id="hud-btn-row">
+    <button id="btn-hud-day" class="hud-pill"></button>
+    <button id="btn-hud-money" class="hud-pill gold"></button>
+    <button id="btn-hud-menu" class="hud-pill" onclick="Game.openManagement()">&#9776; Menü</button>
+  </div>
+  <!-- Stars top center -->
+  <div id="hud-stars-3d"></div>
+  <!-- Crosshair -->
+  <div id="crosshair"></div>
+</div>
+
 <!-- ============ TITELBILDSCHIRM ============ -->
 <div id="screen-title" class="screen active">
   <div class="title-bg">
-    <div class="title-skyline"></div>
     <div class="title-glow"></div>
+    <div class="title-city"></div>
   </div>
   <div class="title-content">
     <div class="title-pizza" id="title-pizza"></div>
     <h1 class="game-logo"><span>PIZZA</span><span class="logo-empire">EMPIRE</span></h1>
-    <p class="game-tagline">Teig. Geld. Geheimnisse.</p>
+    <p class="game-tagline">Teig. Geld. Verbrechen.</p>
     <div class="title-buttons">
       <button id="btn-continue" class="btn btn-gold hidden">Weiterspielen</button>
       <button id="btn-newgame" class="btn btn-outline">Neues Spiel</button>
     </div>
     <p class="title-save-info hidden" id="title-save-info"></p>
-    <p class="title-version">v1.0 &middot; Spielstand wird automatisch gespeichert</p>
+    <div class="title-specs">
+      <span>3D First Person</span><span>&middot;</span><span>Open World</span><span>&middot;</span><span>Auto-Save</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LADEBILDSCHIRM ============ -->
+<div id="screen-loading" class="screen">
+  <div class="loading-content">
+    <div class="loading-pizza" id="loading-pizza"></div>
+    <div class="loading-title">PIZZA EMPIRE</div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar-fill" id="loading-bar"></div>
+    </div>
+    <div class="loading-text" id="loading-text">Welt wird geladen…</div>
   </div>
 </div>
 
@@ -43,36 +86,21 @@
   <div class="story-choices hidden" id="story-choices"></div>
 </div>
 
-<!-- ============ HAUPTSPIEL ============ -->
-<div id="screen-game" class="screen">
-  <header class="hud">
-    <div class="hud-left">
-      <div class="hud-day" id="hud-day">Tag 1</div>
-      <div class="hud-stars" id="hud-stars"></div>
+<!-- ============ MANAGEMENT OVERLAY ============ -->
+<div id="overlay-management" class="overlay hidden">
+  <div class="mgmt-panel">
+    <div class="mgmt-header">
+      <div class="mgmt-title">Management</div>
+      <button class="mgmt-close" onclick="Game.closeManagement()">&#x2715;</button>
     </div>
-    <div class="hud-right">
-      <div class="hud-money" id="hud-money">350&nbsp;€</div>
-      <div class="hud-rep" id="hud-rep"></div>
-    </div>
-  </header>
-
-  <main class="game-main" id="game-main">
-    <!-- Tab: Küche / Service -->
-    <section class="tab-panel active" id="tab-service"></section>
-    <!-- Tab: Einkauf -->
-    <section class="tab-panel" id="tab-shop"></section>
-    <!-- Tab: Umbau -->
-    <section class="tab-panel" id="tab-build"></section>
-    <!-- Tab: Büro -->
-    <section class="tab-panel" id="tab-office"></section>
-  </main>
-
-  <nav class="tabbar" id="tabbar">
-    <button class="tab-btn active" data-tab="service"><span class="tab-ico" data-ico="oven"></span>Küche</button>
-    <button class="tab-btn" data-tab="shop"><span class="tab-ico" data-ico="cart"></span>Einkauf</button>
-    <button class="tab-btn" data-tab="build"><span class="tab-ico" data-ico="hammer"></span>Umbau</button>
-    <button class="tab-btn" data-tab="office"><span class="tab-ico" data-ico="ledger"></span>Büro</button>
-  </nav>
+    <nav class="mgmt-tabs" id="mgmt-tabs">
+      <button class="mgmt-tab active" data-tab="service">&#127829; Aufträge</button>
+      <button class="mgmt-tab" data-tab="shop">&#128722; Einkauf</button>
+      <button class="mgmt-tab" data-tab="build">&#128296; Umbau</button>
+      <button class="mgmt-tab" data-tab="office">&#128196; Büro</button>
+    </nav>
+    <div class="mgmt-body" id="mgmt-body"></div>
+  </div>
 </div>
 
 <!-- ============ PIZZA-ZUBEREITUNG (Overlay) ============ -->
@@ -84,12 +112,12 @@
     <div class="kitchen-actions">
       <button class="btn btn-small btn-outline" id="btn-kitchen-reset">Neu belegen</button>
       <button class="btn btn-small btn-gold" id="btn-kitchen-bake">In den Ofen</button>
-      <button class="btn btn-small btn-outline" id="btn-kitchen-cancel">Zur&uuml;ck</button>
+      <button class="btn btn-small btn-outline" id="btn-kitchen-cancel">Zurück</button>
     </div>
   </div>
 </div>
 
-<!-- ============ TAGESABSCHLUSS (Overlay) ============ -->
+<!-- ============ TAGESABSCHLUSS ============ -->
 <div id="overlay-summary" class="overlay hidden">
   <div class="summary-panel" id="summary-panel"></div>
 </div>
@@ -97,8 +125,18 @@
 <!-- ============ TOAST ============ -->
 <div id="toast-wrap"></div>
 
+<!-- ============ SCRIPTS ============ -->
+<!-- Three.js WebGL engine -->
+<script src="js/engine/three.min.js"></script>
+<!-- Game data / portraits -->
 <script src="js/portraits.js"></script>
+<!-- 3D Engine modules (loaded after Three.js) -->
+<script src="js/engine/world.js"></script>
+<script src="js/engine/player.js"></script>
+<script src="js/engine/npcs.js"></script>
+<!-- Story engine -->
 <script src="js/story.js"></script>
+<!-- Main game logic -->
 <script src="js/game.js"></script>
 </body>
 </html>
