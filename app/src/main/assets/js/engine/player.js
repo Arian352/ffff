@@ -90,6 +90,8 @@ var Player = (function () {
     if (scene) {
       scene.add(_camera);
     }
+
+    if (typeof World !== 'undefined' && World.setCamera) World.setCamera(_camera);
   }
 
   // ── keyboard handlers (desktop fallback) ────────────────────────────────────

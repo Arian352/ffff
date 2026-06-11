@@ -167,6 +167,7 @@ const Game = (() => {
     updateLoading(25, 'Welt wird gebaut…');
     setTimeout(() => {
       try {
+        canvas.style.display = 'block';
         World.init(canvas);
         const scene = World.scene;
         const renderer = World.renderer;
@@ -244,10 +245,13 @@ const Game = (() => {
       // Show/hide interact prompt
       const prompt = document.getElementById('interact-prompt');
       if (prompt) {
-        if (near && near.def && near.def.storyChapter) {
+        if (near) {
           prompt.classList.remove('hidden');
           const lbl = document.getElementById('btn-interact');
-          if (lbl) lbl.innerHTML = `&#x25CF;&nbsp;${near.def.name} ansprechen`;
+          if (lbl) {
+            const name = near.isCitizen ? (near.citizen && near.citizen.name || 'Bürger') : (near.def && near.def.name || 'NPC');
+            lbl.innerHTML = `&#x25CF;&nbsp;${name} ansprechen`;
+          }
         } else {
           prompt.classList.add('hidden');
         }
@@ -279,6 +283,12 @@ const Game = (() => {
       // Update secret lab
       if (typeof SecretLab !== 'undefined') SecretLab.update(delta, Player.getPosition());
 
+      // Audio update
+      if (typeof Audio !== 'undefined') {
+        const moving = !!(playerState && playerState.isMoving);
+        Audio.update(delta, moving);
+      }
+
       // Render
       renderer.render(scene, camera);
 
@@ -304,6 +314,7 @@ const Game = (() => {
       Dialogue.init();
       Dialogue.setOnClose(() => { if (gameLoopRunning && worldInitialized) { canvas3D_show(); touchControls_show(); } });
     }
+    if (typeof Audio !== 'undefined') Audio.init();
   }
 
   // -------- GAME LOOP (2D fallback) --------
@@ -666,6 +677,7 @@ const Game = (() => {
     const extra = kitchenToppings.filter(t => !required.includes(t)).length;
     const quality = matched / required.length;
     let bonus = 0;
+    if (typeof Audio !== 'undefined') Audio.playPizzaBake();
     if (quality === 1 && extra === 0) { bonus = 2; showToast('🍕 Perfekte Pizza! +2€'); }
     else if (quality >= 0.6) showToast('Gute Pizza!');
     else { bonus = -2; showToast('Pizza nicht ganz richtig…'); }
@@ -706,10 +718,11 @@ const Game = (() => {
     const lvl = S.upgrades[key];
     if (lvl >= upg.maxLevel) { showToast('Bereits maximiert!'); return; }
     const cost = upg.costs[lvl];
-    if (S.money < cost) { showToast('Nicht genug Geld!'); return; }
+    if (S.money < cost) { showToast('Nicht genug Geld!'); if (typeof Audio !== 'undefined') Audio.playError(); return; }
     S.money -= cost;
     S.upgrades[key]++;
     showToast(`${upg.name} → Stufe ${S.upgrades[key]}!`);
+    if (typeof Audio !== 'undefined') Audio.playSuccess();
     updateHUD3D();
     renderManagementTab('build');
     save();
@@ -733,6 +746,7 @@ const Game = (() => {
     S.todayExpenses += staffCost;
     if (S.gangEvent==='paid' && S.day % 30 === 0) { S.money -= 500; showToast('500€ Schutzgeld abgezogen.'); }
     document.getElementById('overlay-management').classList.add('hidden');
+    if (typeof Audio !== 'undefined') Audio.playDayEnd();
     showSummary(revenue, staffCost);
   }
 

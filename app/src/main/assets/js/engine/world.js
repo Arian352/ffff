@@ -10,6 +10,7 @@ var World = (function () {
   var _ambientLight, _sunLight, _skyMesh;
   var _pendantLights = [];
   var _colliders = [];
+  var _linkedCamera = null;
 
   // Room anchor positions (exported)
   var ROOM = {
@@ -841,21 +842,12 @@ var World = (function () {
   // ── lighting setup ───────────────────────────────────────────────────────────
   function buildLighting() {
     // Ambient
-    _ambientLight = new THREE.AmbientLight(0xFFE8D6, 0.6);
+    _ambientLight = new THREE.AmbientLight(0xFFE8D6, 1.0);
     _scene.add(_ambientLight);
 
-    // Sun / directional
-    _sunLight = new THREE.DirectionalLight(0xFFFAF0, 1.0);
+    // Sun / directional (no shadows — they fail on Android WebView)
+    _sunLight = new THREE.DirectionalLight(0xFFFAF0, 1.2);
     _sunLight.position.set(30, 50, 20);
-    _sunLight.castShadow = true;
-    _sunLight.shadow.mapSize.width = 1024;
-    _sunLight.shadow.mapSize.height = 1024;
-    _sunLight.shadow.camera.near = 0.5;
-    _sunLight.shadow.camera.far = 150;
-    _sunLight.shadow.camera.left = -40;
-    _sunLight.shadow.camera.right = 40;
-    _sunLight.shadow.camera.top = 40;
-    _sunLight.shadow.camera.bottom = -40;
     _scene.add(_sunLight);
 
     // Fill light
@@ -870,18 +862,15 @@ var World = (function () {
 
     // Scene
     _scene = new THREE.Scene();
-    _scene.fog = new THREE.FogExp2(0x8B7355, 0.04);
+    _scene.fog = new THREE.FogExp2(0x9BB5C8, 0.015);
     _scene.background = new THREE.Color(0x87CEEB);
 
-    // Renderer
-    _renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
-    _renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
-    _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    _renderer.shadowMap.enabled = true;
-    _renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    _renderer.outputEncoding = THREE.sRGBEncoding;
-    _renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    _renderer.toneMappingExposure = 1.0;
+    // Renderer — safe settings for Android WebView WebGL
+    _renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false, powerPreference: 'default', alpha: false });
+    _renderer.setSize(window.innerWidth, window.innerHeight);
+    _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    _renderer.shadowMap.enabled = false;
+    // NO outputEncoding / toneMapping — they break Lambert materials on Android WebView
 
     buildSky();
     buildLighting();
@@ -893,9 +882,13 @@ var World = (function () {
 
     // Resize handler
     window.addEventListener('resize', function () {
-      var w = canvas.clientWidth || window.innerWidth;
-      var h = canvas.clientHeight || window.innerHeight;
+      var w = window.innerWidth;
+      var h = window.innerHeight;
       _renderer.setSize(w, h);
+      if (_linkedCamera) {
+        _linkedCamera.aspect = w / h;
+        _linkedCamera.updateProjectionMatrix();
+      }
     });
   }
 
@@ -919,13 +912,13 @@ var World = (function () {
       // Dawn
       var f = (hour - 6) / 3;
       skyColor = new THREE.Color(0xF4A460).lerp(new THREE.Color(0x87CEEB), f);
-      ambIntensity = 0.2 + f * 0.4;
+      ambIntensity = 0.5 + f * 0.5;
       sunIntensity = 0.3 + f * 0.7;
       _sunLight.position.set(30 * f, 10 + 40 * f, 20);
     } else if (hour >= 9 && hour < 17) {
       // Day
       skyColor = new THREE.Color(0x87CEEB);
-      ambIntensity = 0.6;
+      ambIntensity = 1.0;
       sunIntensity = 1.0;
       var noon = (hour - 9) / 8;
       _sunLight.position.set(30 - noon * 60, 50 - noon * 20, 20);
@@ -933,7 +926,7 @@ var World = (function () {
       // Dusk
       var f2 = (hour - 17) / 3;
       skyColor = new THREE.Color(0x87CEEB).lerp(new THREE.Color(0xE07030), f2);
-      ambIntensity = 0.6 - f2 * 0.4;
+      ambIntensity = 1.0 - f2 * 0.6;
       sunIntensity = 1.0 - f2 * 0.8;
       _sunLight.position.set(-30, 50 - f2 * 45, 20);
     } else {
@@ -961,6 +954,7 @@ var World = (function () {
     init: init,
     update: update,
     updateTimeOfDay: updateTimeOfDay,
+    setCamera: function(cam) { _linkedCamera = cam; },
     ROOM: ROOM,
     get colliders() { return _colliders; },
     get scene() { return _scene; },
