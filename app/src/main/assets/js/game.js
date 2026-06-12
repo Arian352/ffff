@@ -546,6 +546,11 @@ const Game = (() => {
 
   // -------- SHOP TAB --------
   function renderShopTab(container) {
+    const insideFrischmarkt = typeof City !== 'undefined' && City.getCurrentBuilding && City.getCurrentBuilding() === 'frischmarkt';
+    if (!insideFrischmarkt) {
+      container.innerHTML = `<div style="text-align:center;padding:30px 16px"><div style="font-size:40px">🛒</div><div style="font-size:15px;font-weight:700;margin:10px 0;color:var(--c-gold)">Zutaten gibt's nur im Frischmarkt!</div><div style="font-size:13px;color:var(--c-text2);line-height:1.6">Geh raus aus dem Restaurant und folge der Straße ins Dorf. Der Frischmarkt ist das Gebäude mit dem grünen Schild auf der linken Seite.</div></div>`;
+      return;
+    }
     let html = `<div class="card">
       <div class="card-title">Zutaten kaufen</div>
       <div style="font-size:13px;color:var(--c-text2);margin-bottom:12px">Guthaben: <strong style="color:var(--c-gold)">${formatMoney(S.money)}</strong></div>
@@ -570,6 +575,11 @@ const Game = (() => {
 
   // -------- BUILD TAB --------
   function renderBuildTab(container) {
+    const insideBaumarkt = typeof City !== 'undefined' && City.getCurrentBuilding && City.getCurrentBuilding() === 'baumarkt';
+    if (!insideBaumarkt) {
+      container.innerHTML = `<div style="text-align:center;padding:30px 16px"><div style="font-size:40px">🔨</div><div style="font-size:15px;font-weight:700;margin:10px 0;color:var(--c-gold)">Umbauten kauft man im Baumarkt!</div><div style="font-size:13px;color:var(--c-text2);line-height:1.6">Das Gebäude mit dem orangen Schild rechts im Dorf.</div></div>`;
+      return;
+    }
     let html = `<div class="card"><div class="card-title">Renovierung &amp; Upgrades</div><div class="build-grid">`;
     Object.keys(UPGRADES).forEach(key => {
       const upg = UPGRADES[key];

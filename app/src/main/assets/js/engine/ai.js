@@ -199,6 +199,185 @@ var AI = (function () {
             personality: 'friendly',
             isKid: true,
         },
+        {
+            name: 'Greta',  // Baker
+            bodyColor:  0xf0e8d8,   // flour-white apron
+            pantsColor: 0x884422,
+            hairColor:  0xbb7733,
+            skinColor:  0xf4ccA0,
+            schedule: {
+                0:  'apartments',
+                5:  'frischmarkt',
+                11: 'market',
+                14: 'frischmarkt',
+                19: 'apartments',
+            },
+            dialogLines: [
+                'Frisches Brot, noch warm aus dem Ofen!',
+                'Ich stehe jeden Morgen um vier Uhr auf. Jeden Morgen!',
+                'Dein Pizzateig? Nicht schlecht. Aber mein Sauerteig ist besser.',
+                'Auf dem Marktplatz verkaufe ich mittags meine Brezeln.',
+                'Mehl, Wasser, Salz und Liebe. Mehr braucht es nicht.',
+            ],
+            personality: 'friendly',
+        },
+        {
+            name: 'Hans',   // Fisherman
+            bodyColor:  0x336688,   // weathered blue jacket
+            pantsColor: 0x445544,
+            hairColor:  0x999988,
+            skinColor:  0xd8a878,
+            schedule: {
+                0:  'apartments',
+                6:  'fountain',
+                12: 'market',
+                15: 'park',
+                20: 'apartments',
+            },
+            dialogLines: [
+                'Früher habe ich am großen Fluss geangelt. Jetzt nur noch am Brunnen gesessen.',
+                'Der Fang war heute mager. Wie immer.',
+                'Fisch auf Pizza? Sag bloß, du machst sowas.',
+                'Geduld, Junge. Beim Angeln lernt man Geduld.',
+                'Das Wasser im Brunnen ist sauberer als mancher Mensch hier.',
+            ],
+            personality: 'friendly',
+        },
+        {
+            name: 'Yusuf',  // Market vendor
+            bodyColor:  0xcc6622,   // orange vendor vest
+            pantsColor: 0x333344,
+            hairColor:  0x1a0e06,
+            skinColor:  0xc89058,
+            schedule: {
+                0:  'apartments',
+                7:  'market',
+                18: 'fountain',
+                21: 'apartments',
+            },
+            dialogLines: [
+                'Frisches Gemüse! Beste Qualität im ganzen Dorf!',
+                'Für dich mache ich einen Sonderpreis, mein Freund.',
+                'Meine Tomaten sind süßer als die vom Frischmarkt. Ehrenwort.',
+                'Ein Markt ohne Kunden ist wie eine Pizza ohne Käse.',
+                'Komm morgen wieder, dann gibt es frische Paprika.',
+            ],
+            personality: 'friendly',
+        },
+        {
+            name: 'Elena',  // Gossip
+            bodyColor:  0xaa44aa,   // purple coat
+            pantsColor: 0x662266,
+            hairColor:  0x332211,
+            skinColor:  0xf0c090,
+            schedule: {
+                0:  'apartments',
+                9:  'village_west',
+                11: 'market',
+                14: 'fountain',
+                17: 'frischmarkt',
+                20: 'apartments',
+            },
+            dialogLines: [
+                'Hast du schon gehört? Die Leute reden über deinen Laden!',
+                'Man sagt, in der La Famiglia Bar gehen seltsame Gestalten ein und aus.',
+                'Bruno hat sich schon wieder über den Lärm beschwert. Typisch.',
+                'Ich sage ja nichts, ich weiß ja nur alles.',
+                'Sofia und Karl? Frisch verliebt, die beiden. Sieht doch jeder.',
+                'Bleib stehen, ich habe Neuigkeiten!',
+            ],
+            personality: 'friendly',
+        },
+        {
+            name: 'Bruno',  // Grumpy pensioner
+            bodyColor:  0x554444,   // drab brown cardigan
+            pantsColor: 0x3a3a3a,
+            hairColor:  0xcccccc,
+            skinColor:  0xd8b088,
+            schedule: {
+                0:  'apartments',
+                8:  'park',
+                12: 'market',
+                16: 'village_east',
+                19: 'apartments',
+            },
+            dialogLines: [
+                'Was guckst du so? Hab ich was im Gesicht?',
+                'Früher war der Marktplatz noch sauber. Früher!',
+                'Pizza, Pizza, Pizza. Was ist mit anständiger Hausmannskost?',
+                'Die Kinder am Brunnen machen einen Krach, unerträglich.',
+                'Lass mich in Ruhe meine Runde drehen.',
+            ],
+            personality: 'suspicious',
+        },
+        {
+            name: 'Sofia',  // Young couple (with Karl)
+            bodyColor:  0xee5566,   // red summer dress
+            pantsColor: 0xee5566,
+            hairColor:  0x221100,
+            skinColor:  0xeec498,
+            schedule: {
+                0:  'apartments',
+                9:  'fountain',
+                13: 'park',
+                17: 'market',
+                21: 'restaurant',
+                23: 'apartments',
+            },
+            dialogLines: [
+                'Karl und ich essen heute Abend bei dir, versprochen!',
+                'Der Brunnen ist mein Lieblingsplatz im ganzen Dorf.',
+                'Ist das nicht ein wunderschöner Tag?',
+                'Karl hat mir Blumen vom Markt mitgebracht. Süß, oder?',
+                'Eine Pizza mit extra Basilikum, das wäre jetzt was.',
+            ],
+            personality: 'friendly',
+        },
+        {
+            name: 'Karl',   // Young couple (with Sofia)
+            bodyColor:  0x4466cc,   // smart blue shirt
+            pantsColor: 0x222831,
+            hairColor:  0x442e11,
+            skinColor:  0xeac08c,
+            schedule: {
+                0:  'apartments',
+                9:  'fountain',
+                13: 'park',
+                17: 'market',
+                21: 'restaurant',
+                23: 'apartments',
+            },
+            dialogLines: [
+                'Hast du Sofia gesehen? Wir wollten uns am Brunnen treffen.',
+                'Ich spare für einen Ring. Aber psst, kein Wort zu Elena!',
+                'Zwei Pizzen für heute Abend, die beste, die du hast!',
+                'Das Dorf ist klein, aber für uns ist es perfekt.',
+                'Sofia mag Oliven. Ich merke mir sowas.',
+            ],
+            personality: 'friendly',
+        },
+        {
+            name: 'Mia',    // Kid 3, plays at the fountain
+            bodyColor:  0x66dd88,
+            pantsColor: 0xeeaa33,
+            hairColor:  0x884411,
+            skinColor:  0xf8d8a8,
+            schedule: {
+                0:  'apartments',
+                8:  'fountain',
+                13: 'park',
+                16: 'fountain',
+                18: 'apartments',
+            },
+            dialogLines: [
+                'Ich kann Münzen in den Brunnen werfen, ganz weit!',
+                'Tim und Anna spielen immer im Park, aber der Brunnen ist viel besser!',
+                'Hast du eine Pizza dabei? Biiiitte!',
+                'Pass auf, gleich spritzt das Wasser!',
+            ],
+            personality: 'friendly',
+            isKid: true,
+        },
     ];
 
     // ── Humanoid mesh builder ─────────────────────────────────────────────────
