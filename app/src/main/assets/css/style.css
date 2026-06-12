@@ -323,3 +323,93 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;color:var(--c-text);font-size
 /* ============ OFFICE SECTION ============ */
 .office-section{margin-bottom:4px}
 .office-section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--c-text3);margin-bottom:8px;padding-left:2px}
+
+/* ============ HUD – BACK/PAUSE BUTTON ============ */
+#hud-btn-top{position:absolute;top:calc(env(safe-area-inset-top,0px)+10px);right:14px;pointer-events:auto}
+.hud-back-btn{background:rgba(12,10,8,.88);border:1px solid rgba(245,197,66,.25);border-radius:50%;width:36px;height:36px;color:var(--c-text2);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.hud-back-btn:active{border-color:var(--c-gold)}
+
+/* ============ PROXIMITY PROMPTS ============ */
+.hud-prox-wrap{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px)+230px);left:50%;transform:translateX(-50%);pointer-events:auto}
+.btn-prox{background:rgba(245,197,66,.14);border:2px solid rgba(245,197,66,.55);border-radius:22px;color:var(--c-gold);font-size:13px;font-weight:700;padding:10px 22px;cursor:pointer;animation:interactPulse 1.5s ease-in-out infinite;white-space:nowrap}
+
+/* ============ PAUSE OVERLAY ============ */
+.pause-panel{background:var(--c-surface);border-radius:var(--radius);padding:30px 24px;width:220px;display:flex;flex-direction:column;gap:12px;align-items:center;margin:auto;box-shadow:0 -4px 40px rgba(0,0,0,.8)}
+.pause-title{font-family:var(--font-head);font-size:22px;color:var(--c-gold);margin-bottom:6px}
+
+/* ============ COOKING OVERLAY (Schedule One) ============ */
+.ck-screen{width:100%;height:100%;background:#0C0905;display:flex;flex-direction:column}
+.ck-topbar{background:rgba(18,14,10,.97);border-bottom:1px solid rgba(245,197,66,.14);padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:10px}
+.ck-order-info{font-size:13px;color:var(--c-text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ck-order-info strong{color:var(--c-gold)}
+.ck-steps{display:flex;gap:5px;flex-shrink:0}
+.ck-step{font-size:11px;color:var(--c-text3);padding:4px 9px;border-radius:12px;border:1px solid rgba(255,255,255,.07);transition:all .3s;white-space:nowrap}
+.ck-step.active{color:var(--c-gold);border-color:rgba(245,197,66,.4);background:rgba(245,197,66,.07)}
+.ck-step.done{color:var(--c-green);border-color:rgba(62,140,58,.35)}
+.ck-main{flex:1;display:flex;overflow:hidden;min-height:0}
+.ck-visual{flex:1;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 50%,#1a1208 0%,#0C0905 70%);position:relative;overflow:hidden;min-width:0}
+.ck-controls{width:195px;background:rgba(14,12,10,.97);border-left:1px solid rgba(255,255,255,.07);padding:14px 13px;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.ck-panel{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.ck-ctrl-panel{display:flex;flex-direction:column;gap:8px;height:100%}
+.ck-instruction{font-size:14px;font-weight:700;color:var(--c-text);line-height:1.35}
+.ck-instruction span{font-size:12px;font-weight:400;color:var(--c-text2);display:block;margin-top:3px;line-height:1.4}
+.ck-progress-wrap{margin-top:6px}
+.ck-progress-bar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.ck-progress-bar>div{height:100%;background:linear-gradient(90deg,var(--c-gold2),var(--c-gold));border-radius:3px;transition:width .15s ease;width:0%}
+.ck-count{font-size:12px;color:var(--c-text2);margin-top:5px;text-align:center}
+
+/* Dough */
+#ck-dough-wrap{display:flex;align-items:center;justify-content:center;width:100%;height:100%;cursor:pointer}
+#ck-dough-circle{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#F0D090 0%,#D4A055 60%,#C87A20 100%);box-shadow:0 0 28px rgba(200,122,32,.4),inset 0 0 18px rgba(0,0,0,.25);transition:width .25s ease,height .25s ease;display:flex;align-items:center;justify-content:center;position:relative;user-select:none;-webkit-user-select:none}
+#ck-dough-inner{width:60%;height:60%;border-radius:50%;background:rgba(255,255,255,.12)}
+@keyframes doughPulse{0%{transform:scale(1)}40%{transform:scale(1.14);box-shadow:0 0 50px rgba(245,197,66,.55)}100%{transform:scale(1)}}
+.dough-tap{animation:doughPulse .18s ease}
+
+/* Sauce canvas */
+#sauce-canvas,#toppings-canvas{touch-action:none;border-radius:50%;cursor:crosshair;display:block;max-width:min(280px,80vw);max-height:min(280px,80vh)}
+
+/* Topping chips */
+.ck-chips{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;overflow-y:auto;align-content:start}
+.ck-chips::-webkit-scrollbar{display:none}
+.topping-chip3d{background:var(--c-surface2);border:1.5px solid rgba(255,255,255,.08);border-radius:10px;padding:7px 5px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:all .15s;font-size:10px;color:var(--c-text2);text-align:center}
+.topping-chip3d.required{border-color:rgba(245,197,66,.3)}
+.topping-chip3d.added{background:rgba(62,140,58,.12);border-color:rgba(62,140,58,.5);color:var(--c-green)}
+.topping-chip3d:active{border-color:var(--c-gold)}
+.tc-icon{width:28px;height:28px}
+.tc-icon svg{width:100%;height:100%}
+.tc-req{color:var(--c-green);font-size:9px;font-weight:700}
+.tc-name{font-size:9px;line-height:1.2}
+
+/* Oven step */
+.ck-oven-scene{display:flex;align-items:center;gap:24px;padding:20px}
+#ck-peel-pizza{font-size:64px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .08s}
+.ck-oven-door{font-size:70px;filter:blur(1px);opacity:.75}
+.ck-swipe-hint{font-size:22px;color:var(--c-gold);text-align:center;letter-spacing:6px;animation:swipeHint .9s ease-in-out infinite;margin-top:auto}
+@keyframes swipeHint{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(10px);opacity:1}}
+
+/* Baking */
+.ck-oven-glow{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(255,120,0,.55) 0%,rgba(200,60,0,.2) 50%,transparent 70%);filter:blur(12px);animation:ovenGlow .9s ease-in-out infinite;position:absolute}
+@keyframes ovenGlow{0%,100%{transform:scale(.9);opacity:.7}50%{transform:scale(1.1);opacity:1}}
+.ck-oven-window{font-size:80px;text-align:center;position:relative;z-index:1}
+
+/* Result */
+#ck-result-vis{flex-direction:column;gap:6px}
+#ck-result-pizza{filter:drop-shadow(0 6px 20px rgba(245,197,66,.3));animation:resultPop .4s ease}
+@keyframes resultPop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.ck-stars{display:flex;gap:8px;justify-content:center;font-size:30px;padding:4px 0}
+.ck-res-label{font-size:17px;font-weight:700;color:var(--c-gold);text-align:center}
+.ck-res-earn{font-size:22px;font-weight:700;color:var(--c-green);text-align:center;margin:4px 0}
+
+/* ============ DOWNLOAD SCREEN ============ */
+#screen-download{background:radial-gradient(ellipse at 50% 30%,#2a1205 0%,#0d0906 60%,#080604 100%);align-items:center;justify-content:center}
+.dl-content{display:flex;flex-direction:column;align-items:center;gap:18px;width:85%;max-width:380px}
+.dl-title{font-family:var(--font-head);font-size:22px;color:var(--c-gold);text-align:center}
+.dl-subtitle{font-size:13px;color:var(--c-text2);text-align:center;line-height:1.6}
+.dl-packs{width:100%;display:flex;flex-direction:column;gap:9px}
+.dl-pack{background:var(--c-surface2);border-radius:12px;padding:11px 13px;border:1px solid rgba(255,255,255,.05)}
+.dl-pack-header{font-size:12px;font-weight:700;display:flex;justify-content:space-between;margin-bottom:7px}
+.dl-pack-size{color:var(--c-text3);font-size:11px;font-weight:400}
+.dl-bar-wrap{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.dl-bar{height:100%;background:linear-gradient(90deg,var(--c-gold2),var(--c-gold));border-radius:3px;transition:width .3s ease;width:0%}
+.dl-total-text{font-size:12px;color:var(--c-text3);text-align:center}
+.dl-skip-btn{font-size:12px;color:var(--c-text3);background:none;border:none;cursor:pointer;text-decoration:underline;margin-top:4px}

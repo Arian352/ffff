@@ -75,6 +75,19 @@ const Game = (() => {
   let gameLoopRunning = false;
   let animId = null;
 
+  // ---- COOKING STATE (3D Schedule-One style) ----
+  const KITCHEN_POS  = { x: 2,  z: -8  };
+  const COUNTER_POS  = { x: 0,  z: -5  };
+  const PROX_RADIUS  = 2.5;
+  const DOUGH_TAPS   = 8;
+
+  let cookingActive   = false;
+  let cookingOrderId  = null;
+  let cookingStep     = 0;
+  let cookingToppings = [];
+  let doughTapCount   = 0;
+  let _cookRedraw     = null;
+
   // -------- SAVE / LOAD --------
   function save() {
     if (!S) return;
@@ -287,9 +300,12 @@ const Game = (() => {
       try {
         if (typeof GameAudio !== 'undefined') {
           const moving = !!(playerState && playerState.isMoving);
-          GameGameAudio.update(delta, moving);
+          GameAudio.update(delta, moving);
         }
       } catch(e) {}
+
+      // Kitchen / counter proximity prompts
+      try { checkCookingProximity(); } catch(e) {}
 
       // Always render — even if updates failed
       renderer.render(scene, camera);
@@ -985,6 +1001,395 @@ const Game = (() => {
     return icons[key] || '';
   }
 
+  // -------- PAUSE MENU --------
+  function openPause() {
+    touchControls_hide();
+    document.getElementById('overlay-pause').classList.remove('hidden');
+  }
+  function closePause() {
+    document.getElementById('overlay-pause').classList.add('hidden');
+    if (gameLoopRunning && worldInitialized) touchControls_show();
+  }
+  function exitToMenu() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    gameLoopRunning = false;
+    worldInitialized = false;
+    cookingActive = false;
+    ['overlay-pause','overlay-cooking','overlay-kitchen','overlay-management','overlay-summary']
+      .forEach(id => document.getElementById(id).classList.add('hidden'));
+    touchControls_hide();
+    save();
+    showTitleScreen();
+  }
+
+  // -------- COOKING PROXIMITY CHECK (called every frame) --------
+  function checkCookingProximity() {
+    if (!worldInitialized || cookingActive) {
+      ['kitchen-prompt','counter-prompt'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      return;
+    }
+    const pp = Player.getPosition();
+    const kd = Math.hypot(pp.x - KITCHEN_POS.x, pp.z - KITCHEN_POS.z);
+    const cd = Math.hypot(pp.x - COUNTER_POS.x, pp.z - COUNTER_POS.z);
+    const kp = document.getElementById('kitchen-prompt');
+    const cp = document.getElementById('counter-prompt');
+    if (kp) kp.classList.toggle('hidden', kd >= PROX_RADIUS);
+    if (cp) cp.classList.toggle('hidden', cd >= PROX_RADIUS);
+  }
+
+  // -------- 3D COOKING (Schedule One style) --------
+  function openCooking3D() {
+    const order = currentOrders.find(o => !o.done);
+    if (!order) {
+      showToast('Keine offene Bestellung vorhanden!');
+      return;
+    }
+    cookingOrderId  = order.id;
+    cookingStep     = 0;
+    cookingToppings = [];
+    cookingActive   = true;
+    touchControls_hide();
+    document.getElementById('overlay-cooking').classList.remove('hidden');
+
+    const infoEl = document.getElementById('ck-order-info');
+    if (infoEl) infoEl.innerHTML =
+      `<strong>${order.name}</strong> &mdash; ${order.toppings.filter(t=>t!=='dough').join(', ')} &mdash; ${formatMoney(order.price)}`;
+
+    _startCookStep(0);
+  }
+
+  function closeCooking3D() {
+    cookingActive = false;
+    document.getElementById('overlay-cooking').classList.add('hidden');
+    if (gameLoopRunning && worldInitialized) { canvas3D_show(); touchControls_show(); }
+    save();
+    updateHUD3D();
+  }
+
+  function _startCookStep(step) {
+    cookingStep = step;
+    const visuals  = ['ck-dough','ck-sauce','ck-toppings-visual','ck-oven-wrap','ck-baking-vis','ck-result-vis'];
+    const ctrls    = ['ck-ctrl-dough','ck-ctrl-sauce','ck-ctrl-toppings','ck-ctrl-oven','ck-ctrl-baking','ck-ctrl-result'];
+    visuals.forEach((id,i) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', i!==step); });
+    ctrls.forEach((id,i)   => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', i!==step); });
+    document.querySelectorAll('.ck-step').forEach((el,i) => {
+      el.classList.toggle('active', i === step);
+      el.classList.toggle('done', i < step);
+    });
+    if (step === 0) _initDough();
+    else if (step === 1) _initSauce();
+    else if (step === 2) _initToppings();
+    else if (step === 3) _initOven();
+    else if (step === 4) _startBaking();
+    else if (step === 5) _showResult();
+  }
+
+  // ---- STEP 0: DOUGH ----
+  function _initDough() {
+    doughTapCount = 0;
+    const circle = document.getElementById('ck-dough-circle');
+    const bar    = document.getElementById('dough-bar');
+    const cnt    = document.getElementById('dough-count');
+    if (circle) circle.style.cssText = 'width:120px;height:120px';
+    if (bar) bar.style.width = '0%';
+    if (cnt) cnt.textContent = '0 / ' + DOUGH_TAPS;
+  }
+
+  function onDoughTap() {
+    if (cookingStep !== 0) return;
+    doughTapCount++;
+    const pct    = Math.min(doughTapCount / DOUGH_TAPS, 1);
+    const sz     = Math.round(120 + pct * 60);
+    const circle = document.getElementById('ck-dough-circle');
+    const bar    = document.getElementById('dough-bar');
+    const cnt    = document.getElementById('dough-count');
+    if (circle) {
+      circle.style.width  = sz + 'px';
+      circle.style.height = sz + 'px';
+      circle.classList.remove('dough-tap');
+      void circle.offsetWidth; // force reflow
+      circle.classList.add('dough-tap');
+    }
+    if (bar)  bar.style.width = (pct * 100) + '%';
+    if (cnt)  cnt.textContent = doughTapCount + ' / ' + DOUGH_TAPS;
+    if (doughTapCount >= DOUGH_TAPS) {
+      const c = document.getElementById('ck-dough-circle');
+      if (c) c.onclick = null;
+      setTimeout(() => _startCookStep(1), 350);
+    }
+  }
+
+  // ---- STEP 1: SAUCE ----
+  function _initSauce() {
+    const canvas = document.getElementById('sauce-canvas');
+    if (!canvas) { _startCookStep(2); return; }
+    const ctx  = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const CX = W/2, CY = H/2, R = W * 0.43;
+
+    ctx.clearRect(0, 0, W, H);
+    // crust
+    ctx.beginPath(); ctx.arc(CX, CY, R+7, 0, Math.PI*2);
+    ctx.fillStyle = '#D4A055'; ctx.fill();
+    // base
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2);
+    ctx.fillStyle = '#F0C878'; ctx.fill();
+
+    // tracking canvas for coverage
+    const track = document.createElement('canvas');
+    track.width = W; track.height = H;
+    const tCtx = track.getContext('2d');
+    let painting = false;
+    let done = false;
+
+    function paint(x, y) {
+      if (done) return;
+      if ((x-CX)**2 + (y-CY)**2 > R*R) return;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.clip();
+      ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(175,35,15,.78)'; ctx.fill();
+      ctx.restore();
+      tCtx.beginPath(); tCtx.arc(x, y, 22, 0, Math.PI*2);
+      tCtx.fillStyle = '#fff'; tCtx.fill();
+      // measure coverage via sampling
+      let hit = 0, tot = 0;
+      const step = 10;
+      for (let px = CX-R; px <= CX+R; px+=step) {
+        for (let py = CY-R; py <= CY+R; py+=step) {
+          if ((px-CX)**2+(py-CY)**2 <= R*R) {
+            tot++;
+            if (tCtx.getImageData(px|0, py|0, 1, 1).data[0] > 128) hit++;
+          }
+        }
+      }
+      const cov = tot > 0 ? hit/tot : 0;
+      const sBar = document.getElementById('sauce-bar');
+      if (sBar) sBar.style.width = Math.min(cov*150, 100)+'%';
+      if (cov > 0.58) {
+        done = true;
+        canvas.removeEventListener('touchstart', onTS, {passive:false});
+        canvas.removeEventListener('touchmove',  onTM, {passive:false});
+        canvas.removeEventListener('mousedown',  onMD);
+        canvas.removeEventListener('mousemove',  onMM);
+        setTimeout(() => _startCookStep(2), 450);
+      }
+    }
+
+    function pos(e, touch) {
+      const r = canvas.getBoundingClientRect();
+      const p = touch ? e.touches[0] : e;
+      return { x:(p.clientX-r.left)*(W/r.width), y:(p.clientY-r.top)*(H/r.height) };
+    }
+    function onTS(e) { e.preventDefault(); painting=true; const p=pos(e,true); paint(p.x,p.y); }
+    function onTM(e) { e.preventDefault(); if(!painting)return; const p=pos(e,true); paint(p.x,p.y); }
+    function onMD(e) { painting=true; const p=pos(e,false); paint(p.x,p.y); }
+    function onMM(e) { if(!painting)return; const p=pos(e,false); paint(p.x,p.y); }
+    canvas.addEventListener('touchstart', onTS, {passive:false});
+    canvas.addEventListener('touchmove',  onTM, {passive:false});
+    canvas.addEventListener('touchend',   () => { painting=false; }, {passive:false});
+    canvas.addEventListener('mousedown',  onMD);
+    canvas.addEventListener('mousemove',  onMM);
+    canvas.addEventListener('mouseup',    () => { painting=false; });
+  }
+
+  // ---- STEP 2: TOPPINGS ----
+  function _initToppings() {
+    cookingToppings = [];
+    const order  = currentOrders.find(o => String(o.id) === String(cookingOrderId));
+    const canvas = document.getElementById('toppings-canvas');
+    if (!canvas || !order) { _startCookStep(3); return; }
+    const ctx  = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const CX = W/2, CY = H/2, R = W*0.43;
+
+    const COLORS = { salami:'#8B1A1A', mushrooms:'#8B7355', peppers:'#C73E1D',
+                     olives:'#2D4A1E', basil:'#2E7D32', pineapple:'#FFB300',
+                     cheese:'rgba(240,190,50,.8)' };
+
+    function redraw() {
+      ctx.clearRect(0,0,W,H);
+      // crust
+      ctx.beginPath(); ctx.arc(CX,CY,R+7,0,Math.PI*2); ctx.fillStyle='#D4A055'; ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.clip();
+      // sauce
+      ctx.fillStyle='#B52214'; ctx.fill();
+      // cheese if added
+      if (cookingToppings.includes('cheese')) {
+        ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2);
+        ctx.fillStyle='rgba(240,200,60,.65)'; ctx.fill();
+      }
+      // other toppings as blobs
+      const placed = cookingToppings.filter(t=>t!=='sauce'&&t!=='cheese'&&t!=='dough');
+      placed.forEach((t,i) => {
+        const angle = (i/Math.max(placed.length,1))*Math.PI*2 + 0.4;
+        const d = R*0.48;
+        const tx = CX+Math.cos(angle)*d, ty = CY+Math.sin(angle)*d;
+        ctx.beginPath(); ctx.arc(tx,ty,13,0,Math.PI*2);
+        ctx.fillStyle = COLORS[t]||'#888'; ctx.fill();
+        // extra blobs spread around
+        for (let j=1;j<3;j++) {
+          const a2=angle+j*1.2, d2=R*(0.2+j*0.15);
+          ctx.beginPath(); ctx.arc(CX+Math.cos(a2)*d2,CY+Math.sin(a2)*d2,9,0,Math.PI*2);
+          ctx.fillStyle=COLORS[t]||'#888'; ctx.fill();
+        }
+      });
+      ctx.restore();
+      _cookRedraw = redraw;
+    }
+    redraw();
+
+    const chips = document.getElementById('topping-chips');
+    if (chips) {
+      const req = order.toppings.filter(t=>t!=='dough');
+      const avail = Object.keys(S.inventory).filter(k=>k!=='dough'&&S.inventory[k]>0);
+      chips.innerHTML = avail.map(t => {
+        const isReq = req.includes(t);
+        const isAdded = cookingToppings.includes(t);
+        return `<div class="topping-chip3d${isReq?' required':''}${isAdded?' added':''}"
+          onclick="Game.addTopping3D('${t}')" data-ing="${t}">
+          <div class="tc-icon">${IngredientIcons[t]||''}</div>
+          <div class="tc-name">${t}</div>
+          ${isReq?'<div class="tc-req">&#10003;</div>':''}
+        </div>`;
+      }).join('');
+    }
+
+    const doneBtn = document.getElementById('btn-toppings-done');
+    if (doneBtn) {
+      doneBtn.onclick = () => {
+        const req = order.toppings.filter(t=>t!=='dough');
+        const missing = req.filter(r=>!cookingToppings.includes(r));
+        if (missing.length) { showToast('Fehlt noch: ' + missing.join(', ')); return; }
+        _startCookStep(3);
+      };
+    }
+  }
+
+  function addTopping3D(topping) {
+    if (cookingToppings.includes(topping)) return;
+    if ((S.inventory[topping]||0) <= 0) { showToast('Kein ' + topping + ' mehr!'); return; }
+    cookingToppings.push(topping);
+    const chip = document.querySelector(`.topping-chip3d[data-ing="${topping}"]`);
+    if (chip) chip.classList.add('added');
+    if (_cookRedraw) _cookRedraw();
+    const order = currentOrders.find(o=>String(o.id)===String(cookingOrderId));
+    if (order) {
+      const req = order.toppings.filter(t=>t!=='dough');
+      if (req.every(r=>cookingToppings.includes(r))) {
+        showToast('Alle Zutaten drauf! In den Ofen!');
+      }
+    }
+  }
+
+  // ---- STEP 3: OVEN ----
+  function _initOven() {
+    const peel = document.getElementById('ck-peel-pizza');
+    if (!peel) { _startCookStep(4); return; }
+    peel.style.transform = 'translateX(0)';
+    peel.style.transition = 'none';
+    let startX = null;
+    let moved = false;
+
+    function advance() {
+      if (moved) return;
+      moved = true;
+      peel.style.transition = 'transform .35s ease';
+      peel.style.transform  = 'translateX(220px)';
+      peel.removeEventListener('touchstart', onTS, {passive:false});
+      peel.removeEventListener('touchmove',  onTM, {passive:false});
+      peel.removeEventListener('mousedown',  onMD);
+      document.removeEventListener('mousemove', onMM);
+      document.removeEventListener('mouseup',   onMU);
+      setTimeout(() => _startCookStep(4), 450);
+    }
+
+    function onTS(e) { e.preventDefault(); startX=e.touches[0].clientX; }
+    function onTM(e) {
+      e.preventDefault();
+      if (startX===null) return;
+      const dx=e.touches[0].clientX-startX;
+      if (dx>0) peel.style.transform=`translateX(${Math.min(dx,220)}px)`;
+      if (dx>100) advance();
+    }
+    let mDown=false;
+    function onMD(e) { mDown=true; startX=e.clientX; }
+    function onMM(e) {
+      if (!mDown||startX===null) return;
+      const dx=e.clientX-startX;
+      if (dx>0) peel.style.transform=`translateX(${Math.min(dx,220)}px)`;
+      if (dx>100) advance();
+    }
+    function onMU() { mDown=false; startX=null; }
+    peel.addEventListener('touchstart', onTS, {passive:false});
+    peel.addEventListener('touchmove',  onTM, {passive:false});
+    peel.addEventListener('touchend',   () => { startX=null; }, {passive:false});
+    peel.addEventListener('mousedown',  onMD);
+    document.addEventListener('mousemove', onMM);
+    document.addEventListener('mouseup',   onMU);
+  }
+
+  // ---- STEP 4: BAKING ----
+  function _startBaking() {
+    const bar  = document.getElementById('baking-bar');
+    const time = Math.max(1500, 3000 - (S.upgrades.oven-1)*400);
+    const t0   = Date.now();
+    function tick() {
+      const pct = Math.min((Date.now()-t0)/time, 1);
+      if (bar) bar.style.width = (pct*100)+'%';
+      if (pct < 1) setTimeout(tick, 40);
+      else setTimeout(() => _startCookStep(5), 250);
+    }
+    tick();
+  }
+
+  // ---- STEP 5: RESULT ----
+  function _showResult() {
+    const order = currentOrders.find(o=>String(o.id)===String(cookingOrderId));
+    if (!order) { closeCooking3D(); return; }
+    if ((S.inventory.dough||0) <= 0) { showToast('Kein Teig!'); closeCooking3D(); return; }
+
+    S.inventory.dough--;
+    cookingToppings.forEach(t => { if ((S.inventory[t]||0)>0) S.inventory[t]--; });
+
+    const req     = order.toppings.filter(t=>t!=='dough');
+    const matched = req.filter(r=>cookingToppings.includes(r)).length;
+    const extra   = cookingToppings.filter(t=>!req.includes(t)&&t!=='dough').length;
+    const quality = req.length>0 ? matched/req.length : 1;
+    let stars=1, bonus=-2;
+    if (quality===1&&extra===0) { stars=3; bonus=3; }
+    else if (quality>=0.6)       { stars=2; bonus=1; }
+
+    order.done  = true;
+    order.price = Math.max(5, order.price+bonus);
+    S.stats.pizzasMade++;
+    S.repPoints = (S.repPoints||0) + (quality>=1?3:quality>=0.6?1:0);
+    if (S.repPoints >= 10+S.reputation*6) { S.repPoints=0; S.reputation=Math.min(S.reputation+0.5,5); }
+
+    try { if (typeof GameAudio!=='undefined') GameAudio.playSuccess&&GameAudio.playSuccess(); } catch(e){}
+
+    const pizzaEl  = document.getElementById('ck-result-pizza');
+    const starsEl  = document.getElementById('ck-result-stars');
+    const labelEl  = document.getElementById('ck-result-label');
+    const earnEl   = document.getElementById('ck-result-earn');
+    if (pizzaEl) pizzaEl.innerHTML = buildPizzaSVG(cookingToppings, 130);
+    if (starsEl) starsEl.innerHTML = '★★★'.split('').map((s,i)=>
+      `<span style="color:${i<stars?'var(--c-gold)':'rgba(255,255,255,.15)'}">${s}</span>`
+    ).join('');
+    if (labelEl) labelEl.textContent = stars===3?'Perfektion!':stars===2?'Sehr gut!':'Geht so…';
+    if (earnEl)  earnEl.textContent  = '+' + formatMoney(order.price);
+
+    const btn = document.getElementById('btn-serve');
+    if (btn) btn.onclick = () => {
+      save();
+      closeCooking3D();
+      showToast(order.name + ' serviert! +' + formatMoney(order.price));
+    };
+  }
+
   // -------- INIT --------
   function init() {
     document.getElementById('btn-newgame').addEventListener('click', () => {
@@ -1003,13 +1408,33 @@ const Game = (() => {
       setTimeout(initWorld, 50);
     });
 
-    // Kitchen buttons
+    // 2D kitchen buttons (fallback)
     document.getElementById('btn-kitchen-bake').addEventListener('click', bake);
     document.getElementById('btn-kitchen-reset').addEventListener('click', () => { kitchenToppings=[]; renderKitchen(); });
     document.getElementById('btn-kitchen-cancel').addEventListener('click', () => { closeKitchen(); openManagement(); });
 
+    // 3D kitchen/counter proximity buttons
+    const btnKitchen = document.getElementById('btn-kitchen-enter');
+    if (btnKitchen) btnKitchen.addEventListener('click', () => openCooking3D());
+    const btnCounter = document.getElementById('btn-counter-open');
+    if (btnCounter) btnCounter.addEventListener('click', () => { touchControls_hide(); openManagement(); });
+
+    // Download-skip button
+    const skipBtn = document.getElementById('btn-dl-skip');
+    if (skipBtn) skipBtn.addEventListener('click', () => {
+      if (typeof AssetDownloader !== 'undefined') AssetDownloader.markComplete && AssetDownloader.markComplete();
+      showTitleScreen();
+    });
+
     Story.init();
-    showTitleScreen();
+
+    // First-launch: show download screen before title
+    if (typeof AssetDownloader !== 'undefined' && !AssetDownloader.isComplete()) {
+      showScreen('screen-download');
+      AssetDownloader.run(() => showTitleScreen());
+    } else {
+      showTitleScreen();
+    }
   }
 
   return {
@@ -1018,6 +1443,9 @@ const Game = (() => {
     openKitchen, toggleTopping, buyIngredient,
     upgrade, hireStaff, endDay, nextDay,
     triggerEnding, restartGame,
+    // New in Phase 6
+    openPause, closePause, exitToMenu,
+    openCooking3D, closeCooking3D, onDoughTap, addTopping3D,
   };
 })();
 
@@ -1035,13 +1463,19 @@ function showToast(msg) {
 // -------- BOOT --------
 document.addEventListener('DOMContentLoaded', () => Game.init());
 window.handleAndroidBack = () => {
-  const ov1 = document.getElementById('overlay-summary');
-  const ov2 = document.getElementById('overlay-kitchen');
-  const ov3 = document.getElementById('overlay-management');
+  const ovPause = document.getElementById('overlay-pause');
+  const ovCook  = document.getElementById('overlay-cooking');
+  const ov1     = document.getElementById('overlay-summary');
+  const ov2     = document.getElementById('overlay-kitchen');
+  const ov3     = document.getElementById('overlay-management');
+  if (ovCook  && !ovCook.classList.contains('hidden'))  { Game.closeCooking3D(); return 'handled'; }
+  if (ovPause && !ovPause.classList.contains('hidden')) { Game.closePause();     return 'handled'; }
   if (ov1 && !ov1.classList.contains('hidden')) { ov1.classList.add('hidden'); return 'handled'; }
   if (ov2 && !ov2.classList.contains('hidden')) { ov2.classList.add('hidden'); return 'handled'; }
-  if (ov3 && !ov3.classList.contains('hidden')) { Game.closeManagement(); return 'handled'; }
+  if (ov3 && !ov3.classList.contains('hidden')) { Game.closeManagement();      return 'handled'; }
   const title = document.getElementById('screen-title');
   if (title && title.classList.contains('active')) return 'exit';
+  // In-game: open pause instead of exiting
+  if (typeof Game !== 'undefined') Game.openPause();
   return 'handled';
 };

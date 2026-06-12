@@ -25,16 +25,51 @@
   <div id="interact-prompt" class="hidden">
     <button id="btn-interact">&#x25CF;&nbsp;Sprechen</button>
   </div>
-  <!-- Menu button bottom right -->
+  <!-- HUD: day + money info bottom-right -->
   <div id="hud-btn-row">
     <button id="btn-hud-day" class="hud-pill"></button>
     <button id="btn-hud-money" class="hud-pill gold"></button>
-    <button id="btn-hud-menu" class="hud-pill" onclick="Game.openManagement()">&#9776; Menü</button>
+  </div>
+  <!-- Pause / back-to-menu button top-right -->
+  <div id="hud-btn-top">
+    <button id="btn-hud-back" class="hud-back-btn" onclick="Game.openPause()">&#9776;</button>
   </div>
   <!-- Stars top center -->
   <div id="hud-stars-3d"></div>
   <!-- Crosshair -->
   <div id="crosshair"></div>
+  <!-- Kitchen proximity prompt -->
+  <div id="kitchen-prompt" class="hud-prox-wrap hidden">
+    <button class="btn-prox" id="btn-kitchen-enter">&#127829; K&#252;che betreten</button>
+  </div>
+  <!-- Counter / orders proximity prompt -->
+  <div id="counter-prompt" class="hud-prox-wrap hidden">
+    <button class="btn-prox" id="btn-counter-open">&#128203; Bestellungen</button>
+  </div>
+</div>
+
+<!-- ============ DOWNLOAD-BILDSCHIRM (Erster Start) ============ -->
+<div id="screen-download" class="screen">
+  <div class="dl-content">
+    <div class="dl-title">&#127829; Pizza Empire HD</div>
+    <div class="dl-subtitle">Grafik-Pakete werden heruntergeladen.<br>Danach l&#228;uft das Spiel vollst&#228;ndig offline.</div>
+    <div class="dl-packs" id="dl-packs-list">
+      <div class="dl-pack">
+        <div class="dl-pack-header"><span>HD-Texturen</span><span class="dl-pack-size">340 MB</span></div>
+        <div class="dl-bar-wrap"><div class="dl-bar" id="dl-bar-0"></div></div>
+      </div>
+      <div class="dl-pack">
+        <div class="dl-pack-header"><span>HD-Charaktermodelle</span><span class="dl-pack-size">210 MB</span></div>
+        <div class="dl-bar-wrap"><div class="dl-bar" id="dl-bar-1"></div></div>
+      </div>
+      <div class="dl-pack">
+        <div class="dl-pack-header"><span>Extra-Skyboxen</span><span class="dl-pack-size">180 MB</span></div>
+        <div class="dl-bar-wrap"><div class="dl-bar" id="dl-bar-2"></div></div>
+      </div>
+    </div>
+    <div class="dl-total-text" id="dl-total-text">0 MB / 730 MB</div>
+    <button class="dl-skip-btn" id="btn-dl-skip">&#252;berspringen (Basis-Grafik)</button>
+  </div>
 </div>
 
 <!-- ============ TITELBILDSCHIRM ============ -->
@@ -103,7 +138,86 @@
   </div>
 </div>
 
-<!-- ============ PIZZA-ZUBEREITUNG (Overlay) ============ -->
+<!-- ============ PIZZA-ZUBEREITUNG 3D (Schedule-One-Stil) ============ -->
+<div id="overlay-cooking" class="overlay hidden">
+  <div class="ck-screen">
+    <div class="ck-topbar">
+      <div class="ck-order-info" id="ck-order-info">Bestellung laden&#8230;</div>
+      <div class="ck-steps">
+        <div class="ck-step active" data-step="0">&#127859; Teig</div>
+        <div class="ck-step" data-step="1">&#127813; Sauce</div>
+        <div class="ck-step" data-step="2">&#129472; Belag</div>
+        <div class="ck-step" data-step="3">&#128293; Ofen</div>
+      </div>
+    </div>
+    <div class="ck-main">
+      <div class="ck-visual">
+        <div id="ck-dough" class="ck-panel">
+          <div id="ck-dough-wrap">
+            <div id="ck-dough-circle"><div id="ck-dough-inner"></div></div>
+          </div>
+        </div>
+        <div id="ck-sauce" class="ck-panel hidden">
+          <canvas id="sauce-canvas" width="280" height="280"></canvas>
+        </div>
+        <div id="ck-toppings-visual" class="ck-panel hidden">
+          <canvas id="toppings-canvas" width="280" height="280"></canvas>
+        </div>
+        <div id="ck-oven-wrap" class="ck-panel hidden">
+          <div class="ck-oven-scene">
+            <div id="ck-peel-pizza">&#127829;</div>
+            <div class="ck-oven-door">&#128293;</div>
+          </div>
+        </div>
+        <div id="ck-baking-vis" class="ck-panel hidden">
+          <div class="ck-oven-glow"></div>
+          <div class="ck-oven-window">&#128293;</div>
+        </div>
+        <div id="ck-result-vis" class="ck-panel hidden">
+          <div id="ck-result-pizza"></div>
+        </div>
+      </div>
+      <div class="ck-controls">
+        <div id="ck-ctrl-dough" class="ck-ctrl-panel">
+          <div class="ck-instruction">Teig kneten!<span>Tippe schnell auf den Teig!</span></div>
+          <div class="ck-progress-wrap">
+            <div class="ck-progress-bar"><div id="dough-bar"></div></div>
+            <div id="dough-count" class="ck-count">0 / 8</div>
+          </div>
+        </div>
+        <div id="ck-ctrl-sauce" class="ck-ctrl-panel hidden">
+          <div class="ck-instruction">Sauce verteilen!<span>Wische mit dem Finger &#252;ber die Pizza!</span></div>
+          <div class="ck-progress-wrap">
+            <div class="ck-progress-bar"><div id="sauce-bar"></div></div>
+          </div>
+        </div>
+        <div id="ck-ctrl-toppings" class="ck-ctrl-panel hidden">
+          <div class="ck-instruction">Belag auflegen!<span>Tippe auf eine Zutat.</span></div>
+          <div id="topping-chips" class="ck-chips"></div>
+          <button id="btn-toppings-done" class="btn btn-small btn-gold">In den Ofen &#8594;</button>
+        </div>
+        <div id="ck-ctrl-oven" class="ck-ctrl-panel hidden">
+          <div class="ck-instruction">Pizza einschieben!<span>Wische die Pizza nach rechts.</span></div>
+          <div class="ck-swipe-hint">&#8594; &#8594; &#8594;</div>
+        </div>
+        <div id="ck-ctrl-baking" class="ck-ctrl-panel hidden">
+          <div class="ck-instruction">Pizza backt&#8230;</div>
+          <div class="ck-progress-wrap">
+            <div class="ck-progress-bar"><div id="baking-bar"></div></div>
+          </div>
+        </div>
+        <div id="ck-ctrl-result" class="ck-ctrl-panel hidden">
+          <div id="ck-result-stars" class="ck-stars"></div>
+          <div id="ck-result-label" class="ck-res-label"></div>
+          <div id="ck-result-earn" class="ck-res-earn"></div>
+          <button id="btn-serve" class="btn btn-gold">Servieren! &#10003;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PIZZA-ZUBEREITUNG 2D (Fallback) ============ -->
 <div id="overlay-kitchen" class="overlay hidden">
   <div class="kitchen-panel">
     <div class="kitchen-order" id="kitchen-order"></div>
@@ -112,8 +226,17 @@
     <div class="kitchen-actions">
       <button class="btn btn-small btn-outline" id="btn-kitchen-reset">Neu belegen</button>
       <button class="btn btn-small btn-gold" id="btn-kitchen-bake">In den Ofen</button>
-      <button class="btn btn-small btn-outline" id="btn-kitchen-cancel">Zurück</button>
+      <button class="btn btn-small btn-outline" id="btn-kitchen-cancel">Zur&#252;ck</button>
     </div>
+  </div>
+</div>
+
+<!-- ============ PAUSE-MEN&#220; ============ -->
+<div id="overlay-pause" class="overlay hidden">
+  <div class="pause-panel">
+    <div class="pause-title">Pause</div>
+    <button class="btn btn-outline" onclick="Game.closePause()">Weiterspielen</button>
+    <button class="btn btn-red" style="margin-top:6px" onclick="Game.exitToMenu()">Zum Hauptmen&#252;</button>
   </div>
 </div>
 
@@ -146,6 +269,8 @@
 <script src="js/story.js"></script>
 <!-- Audio system -->
 <script src="js/audio.js"></script>
+<!-- Asset downloader -->
+<script src="js/downloader.js"></script>
 <!-- Main game logic -->
 <script src="js/game.js"></script>
 </body>
