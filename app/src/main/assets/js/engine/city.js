@@ -278,8 +278,18 @@ var City = (function () {
 
     // ── Park x=0 z=+8 ────────────────────────────────────────────────────────
     function buildPark() {
-        // Grass patch
+        // Grass patch — real photo grass texture with color fallback
         var grassMat = makeMat(0x44aa44);
+        try {
+            var gl = new THREE.TextureLoader();
+            gl.load('textures/terrain/grasslight-big.jpg', function (t) {
+                t.wrapS = t.wrapT = THREE.RepeatWrapping;
+                t.repeat.set(5, 4);
+                grassMat.map = t;
+                grassMat.color.set(0xffffff);
+                grassMat.needsUpdate = true;
+            });
+        } catch (e) {}
         var grass = makeBox(14, 0.1, 12, grassMat, 0, 0.05, 8);
         scene.add(grass);
 

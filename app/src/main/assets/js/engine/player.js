@@ -92,6 +92,8 @@ var Player = (function () {
     }
 
     if (typeof World !== 'undefined' && World.setCamera) World.setCamera(_camera);
+
+    return _camera;
   }
 
   // ── keyboard handlers (desktop fallback) ────────────────────────────────────

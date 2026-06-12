@@ -29,6 +29,11 @@ class MainActivity : AppCompatActivity() {
             databaseEnabled = true
             cacheMode = WebSettings.LOAD_DEFAULT
             allowFileAccess = true
+            // Required so WebGL can use textures loaded from file:///android_asset
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = true
             textZoom = 100
             mediaPlaybackRequiresUserGesture = false
         }

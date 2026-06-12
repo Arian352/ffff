@@ -78,6 +78,7 @@ var GameAudio = (function () {
 
   // ── Sound effects ────────────────────────────────────────────────────────────
   function playCoin() {
+    if (_realSfx('coin')) return;
     if (!_ensureCtx()) return;
     var t = ctx.currentTime;
     _osc('sine', NOTES.E5, t, 0.08, 0.3);
@@ -93,6 +94,7 @@ var GameAudio = (function () {
   }
 
   function playSuccess() {
+    if (_realSfx('success')) return;
     if (!_ensureCtx()) return;
     var t = ctx.currentTime;
     _osc('sine', NOTES.C4, t,       0.12, 0.3);
@@ -102,6 +104,7 @@ var GameAudio = (function () {
   }
 
   function playError() {
+    if (_realSfx('error')) return;
     if (!_ensureCtx()) return;
     var t = ctx.currentTime;
     _osc('sawtooth', 180, t,      0.15, 0.25);
@@ -120,6 +123,7 @@ var GameAudio = (function () {
   }
 
   function playDialogOpen() {
+    if (_realSfx('menu')) return;
     if (!_ensureCtx()) return;
     var t = ctx.currentTime;
     _osc('sine', NOTES.G4, t,      0.08, 0.2);
@@ -144,6 +148,7 @@ var GameAudio = (function () {
   }
 
   function playUnlock() {
+    if (_realSfx('unlock')) return;
     if (!_ensureCtx()) return;
     var t = ctx.currentTime;
     _osc('square', 220, t,       0.06, 0.2);
@@ -154,6 +159,7 @@ var GameAudio = (function () {
   }
 
   function playMoney() {
+    if (_realSfx('coin')) return;
     if (!_ensureCtx()) return;
     var t = ctx.currentTime;
     _osc('sine', NOTES.A4, t,      0.06, 0.25);
@@ -204,15 +210,78 @@ var GameAudio = (function () {
     _musicTimer = setTimeout(_playMusicLoop, loopDuration - 200);
   }
 
+  // ── Real music files (24 CC0 tracks, shuffled playlist) ─────────────────────
+  var MUSIC_FILES = (function () {
+    var list = [];
+    for (var i = 1; i <= 18; i++) list.push('audio/music/theme-' + i + '.ogg');
+    list.push('audio/music/theme-6-short.ogg');
+    list.push('audio/music/Project_Utopia.ogg');
+    list.push('audio/music/358232_j_s_song.ogg');
+    list.push('audio/music/376737_Skullbeatz___Bad_Cat_Maste.ogg');
+    // Shuffle
+    for (var j = list.length - 1; j > 0; j--) {
+      var k = Math.floor(Math.random() * (j + 1));
+      var tmp = list[j]; list[j] = list[k]; list[k] = tmp;
+    }
+    return list;
+  }());
+  var SFX_FILES = {
+    coin:    'audio/sfx/gold-1.ogg',
+    success: 'audio/sfx/succes-2.ogg',
+    unlock:  'audio/sfx/power-up-2.ogg',
+    error:   'audio/sfx/game-over-2.ogg',
+    menu:    'audio/sfx/menu-6.ogg',
+    secret:  'audio/sfx/secret-1.wav',
+  };
+  var _musicEl = null;
+  var _trackIdx = 0;
+  var _realMusicFailed = false;
+  var _sfxCache = {};
+
+  function _playRealTrack() {
+    if (_realMusicFailed || !_musicPlaying) return;
+    if (typeof window.Audio !== 'function') { _realMusicFailed = true; if (_ensureCtx()) _playMusicLoop(); return; }
+    try {
+      _musicEl = new window.Audio(MUSIC_FILES[_trackIdx]);
+      _musicEl.volume = _muted ? 0 : 0.35;
+      _musicEl.onended = function () {
+        _trackIdx = (_trackIdx + 1) % MUSIC_FILES.length;
+        _playRealTrack();
+      };
+      _musicEl.onerror = function () { _realMusicFailed = true; if (_ensureCtx()) _playMusicLoop(); };
+      var p = _musicEl.play();
+      if (p && p.catch) p.catch(function () { _realMusicFailed = true; if (_ensureCtx()) _playMusicLoop(); });
+    } catch (e) { _realMusicFailed = true; if (_ensureCtx()) _playMusicLoop(); }
+  }
+
+  // Play a real SFX file; returns false so caller can fall back to synth
+  function _realSfx(key) {
+    if (typeof window.Audio !== 'function' || _muted) return false;
+    var file = SFX_FILES[key];
+    if (!file) return false;
+    try {
+      var el = _sfxCache[key];
+      if (!el) { el = new window.Audio(file); _sfxCache[key] = el; }
+      el.currentTime = 0;
+      el.volume = 0.7;
+      var p = el.play();
+      if (p && p.catch) p.catch(function () {});
+      return true;
+    } catch (e) { return false; }
+  }
+
   function startMusic() {
-    if (!_ensureCtx() || _musicPlaying) return;
+    if (_musicPlaying) return;
     _musicPlaying = true;
-    _playMusicLoop();
+    // Prefer real music files; synth loop is the fallback
+    if (!_realMusicFailed && typeof window.Audio === 'function') _playRealTrack();
+    else { if (_ensureCtx()) _playMusicLoop(); }
   }
 
   function stopMusic() {
     _musicPlaying = false;
     if (_musicTimer) { clearTimeout(_musicTimer); _musicTimer = null; }
+    if (_musicEl) { try { _musicEl.pause(); } catch (e) {} _musicEl = null; }
   }
 
   // ── Ambient city sounds ──────────────────────────────────────────────────────

@@ -33,29 +33,7 @@ jobs:
             "platforms;android-34" \
             "build-tools;34.0.0"
 
-      - name: Download Three.js r128 (3D engine)
-        run: |
-          mkdir -p app/src/main/assets/js/engine
-          echo "Downloading Three.js r128..."
-          curl -fsSL \
-            "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" \
-            -o app/src/main/assets/js/engine/three.min.js
-          SIZE=$(wc -c < app/src/main/assets/js/engine/three.min.js)
-          echo "Three.js downloaded: ${SIZE} bytes"
-
-      # Download texture assets (CC0/free) for richer visuals
-      - name: Download game assets
-        run: |
-          mkdir -p app/src/main/assets/textures
-          # Three.js example textures
-          curl -fsSL "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/hardwood2_diffuse.jpg" -o app/src/main/assets/textures/wood.jpg || true
-          curl -fsSL "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/brick_diffuse.jpg" -o app/src/main/assets/textures/brick.jpg || true
-          curl -fsSL "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/floor/FloorsCheckerboard_S_Diffuse.jpg" -o app/src/main/assets/textures/floor.jpg || true
-          curl -fsSL "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/terrain/grasslight-big.jpg" -o app/src/main/assets/textures/grass.jpg || true
-          curl -fsSL "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/concrete/concrete.jpg" -o app/src/main/assets/textures/concrete.jpg || true
-          # Kenney.nl CC0 texture pack (zip)
-          curl -fsSL "https://kenney.nl/media/pages/assets/prototype-textures/a36c7c4b24-1713278609/kenney_prototype-textures.zip" -o /tmp/textures.zip || true
-          [ -f /tmp/textures.zip ] && unzip -o /tmp/textures.zip -d app/src/main/assets/textures/ || true
+      # Three.js + all textures/audio are committed to the repo — no downloads needed
 
       - name: Download Gradle Wrapper JAR
         run: |

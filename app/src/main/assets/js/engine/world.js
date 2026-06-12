@@ -12,6 +12,55 @@ var World = (function () {
   var _colliders = [];
   var _linkedCamera = null;
 
+  // Real photo textures (loaded async, procedural canvas fallback until ready)
+  var _texLoader = null;
+  var _skyDay = null, _skyNight = null, _skyDawn = null;
+  var _skyDayReady = false, _skyNightReady = false, _skyDawnReady = false;
+  var _moonMesh = null;
+
+  // Creates a Lambert material with a procedural fallback texture that is
+  // swapped for the real photo texture once it finishes loading.
+  function texturedMat(path, rx, ry, fallbackFactory, opts) {
+    var params = opts || {};
+    params.map = fallbackFactory();
+    var mat = new THREE.MeshLambertMaterial(params);
+    if (_texLoader) {
+      try {
+        _texLoader.load(path, function (t) {
+          t.wrapS = t.wrapT = THREE.RepeatWrapping;
+          t.repeat.set(rx, ry);
+          mat.map = t;
+          mat.needsUpdate = true;
+        });
+      } catch (e) {}
+    }
+    return mat;
+  }
+
+  function loadSkyboxes() {
+    try {
+      var cl = new THREE.CubeTextureLoader();
+      var order = ['posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg'];
+      function cubeUrls(dir) { return order.map(function (f) { return 'textures/cube/' + dir + '/' + f; }); }
+      _skyDay   = cl.load(cubeUrls('day'),   function () { _skyDayReady = true; });
+      _skyNight = cl.load(cubeUrls('night'), function () { _skyNightReady = true; });
+      _skyDawn  = cl.load(cubeUrls('dawn'),  function () { _skyDawnReady = true; });
+    } catch (e) {}
+  }
+
+  function buildMoon() {
+    if (!_texLoader) return;
+    try {
+      _texLoader.load('textures/planets/moon_1024.jpg', function (t) {
+        var mat = new THREE.MeshBasicMaterial({ map: t, fog: false });
+        _moonMesh = new THREE.Mesh(new THREE.SphereGeometry(5, 24, 24), mat);
+        _moonMesh.position.set(55, 60, -70);
+        _moonMesh.visible = false;
+        _scene.add(_moonMesh);
+      });
+    } catch (e) {}
+  }
+
   // Room anchor positions (exported)
   var ROOM = {
     exterior: { x: 0, z: 0 },
@@ -201,9 +250,8 @@ var World = (function () {
     sidewalk.receiveShadow = true;
     _scene.add(sidewalk);
 
-    // Building facade
-    var brickTex = makeBrickTexture();
-    var facadeMat = new THREE.MeshLambertMaterial({ map: brickTex });
+    // Building facade — real brick photo texture
+    var facadeMat = texturedMat('textures/brick_diffuse.jpg', 2, 2, makeBrickTexture);
 
     // Left wall panel
     var leftPanel = makeBox(5.5, 5, 0.3, facadeMat);
@@ -306,8 +354,7 @@ var World = (function () {
     var dr = ROOM.dining;
     var W = 12, H = 4, D = 14;
 
-    var floorTex = makeCheckerTexture();
-    var floorMat = new THREE.MeshLambertMaterial({ map: floorTex });
+    var floorMat = texturedMat('textures/floors/FloorsCheckerboard_S_Diffuse.jpg', 6, 7, makeCheckerTexture);
     var floor = makePlane(W, D, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(dr.x, 0, dr.z);
@@ -315,7 +362,7 @@ var World = (function () {
     _scene.add(floor);
 
     var wallMat = new THREE.MeshLambertMaterial({ color: 0xF5ECD7 });
-    var wallMatB = new THREE.MeshLambertMaterial({ map: makeBrickTexture() });
+    var wallMatB = texturedMat('textures/brick_diffuse.jpg', 3, 1, makeBrickTexture);
 
     // Back wall (toward kitchen)
     var backWall = makeBox(W, H, 0.2, wallMat);
@@ -392,7 +439,7 @@ var World = (function () {
     _scene.add(menuBoard);
 
     // Counter/bar
-    var counterMat = new THREE.MeshLambertMaterial({ map: makeWoodTexture() });
+    var counterMat = texturedMat('textures/hardwood2_diffuse.jpg', 2, 1, makeWoodTexture);
     var counter = makeBox(4, 1.1, 0.8, counterMat);
     counter.position.set(dr.x - 3.5, 0.55, dr.z - D/2 + 1.5);
     _scene.add(counter);
@@ -448,7 +495,7 @@ var World = (function () {
   }
 
   function buildDiningTable(x, z) {
-    var woodMat = new THREE.MeshLambertMaterial({ map: makeWoodTexture() });
+    var woodMat = texturedMat('textures/hardwood2_diffuse.jpg', 1, 1, makeWoodTexture);
     var darkMat = new THREE.MeshLambertMaterial({ color: 0x5C3A1E });
 
     // Tabletop
@@ -513,7 +560,7 @@ var World = (function () {
     var kr = ROOM.kitchen;
     var W = 10, H = 3.5, D = 10;
 
-    var floorMat = new THREE.MeshLambertMaterial({ map: makeTileTexture() });
+    var floorMat = texturedMat('textures/floors/FloorsCheckerboard_S_Diffuse.jpg', 5, 5, makeTileTexture);
     var floor = makePlane(W, D, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(kr.x, 0, kr.z);
@@ -696,7 +743,7 @@ var World = (function () {
     _scene.add(ceil);
 
     // Desk
-    var deskMat = new THREE.MeshLambertMaterial({ map: makeWoodTexture() });
+    var deskMat = texturedMat('textures/hardwood2_diffuse.jpg', 1, 1, makeWoodTexture);
     var deskTop = makeBox(2.4, 0.1, 1.2, deskMat);
     deskTop.position.set(or.x - 0.5, 0.78, or.z - 2);
     _scene.add(deskTop);
@@ -805,7 +852,7 @@ var World = (function () {
   // ── world corridor connections ───────────────────────────────────────────────
   function buildCorridor() {
     // Hallway connecting exterior to dining room (z: 0 to -13)
-    var wallMat = new THREE.MeshLambertMaterial({ map: makeBrickTexture() });
+    var wallMat = texturedMat('textures/brick_diffuse.jpg', 2, 2, makeBrickTexture);
     var floorMat = new THREE.MeshLambertMaterial({ color: 0x9E9E9E });
 
     var corrFloor = makePlane(4, 6, floorMat);
@@ -879,6 +926,10 @@ var World = (function () {
       _renderer.setSize(window.innerWidth, window.innerHeight);
     }, false);
 
+    // Real photo texture loaders
+    try { _texLoader = new THREE.TextureLoader(); } catch (e) { _texLoader = null; }
+    loadSkyboxes();
+
     buildSky();
     buildLighting();
     buildExterior();
@@ -886,6 +937,7 @@ var World = (function () {
     buildDiningRoom();
     buildKitchen();
     buildOffice();
+    buildMoon();
 
     // Resize handler
     window.addEventListener('resize', function () {
@@ -937,15 +989,29 @@ var World = (function () {
       sunIntensity = 1.0 - f2 * 0.8;
       _sunLight.position.set(-30, 50 - f2 * 45, 20);
     } else {
-      // Night
-      skyColor = new THREE.Color(0x0A0A1A);
-      ambIntensity = 0.15;
-      sunIntensity = 0.0;
-      _sunLight.position.set(-30, 5, 20);
+      // Night — moonlit, never pitch black
+      skyColor = new THREE.Color(0x10142A);
+      ambIntensity = 0.45;
+      sunIntensity = 0.15;
+      _sunLight.position.set(-30, 35, 20);
     }
 
-    if (_skyMesh) _skyMesh.material.color.copy(skyColor);
-    if (_scene) _scene.background = skyColor;
+    // Photo skybox when loaded, color fallback otherwise
+    var photoSky = null;
+    var isNight = (hour < 6 || hour >= 20);
+    var isDay = (hour >= 9 && hour < 17);
+    if (isDay && _skyDayReady)        photoSky = _skyDay;
+    else if (isNight && _skyNightReady) photoSky = _skyNight;
+    else if (!isDay && !isNight && _skyDawnReady) photoSky = _skyDawn;
+
+    if (photoSky && _scene) {
+      _scene.background = photoSky;
+      if (_skyMesh) _skyMesh.visible = false;
+    } else {
+      if (_skyMesh) { _skyMesh.visible = true; _skyMesh.material.color.copy(skyColor); }
+      if (_scene) _scene.background = skyColor;
+    }
+    if (_moonMesh) _moonMesh.visible = isNight;
     if (_ambientLight) _ambientLight.intensity = ambIntensity;
     if (_sunLight) _sunLight.intensity = sunIntensity;
 
