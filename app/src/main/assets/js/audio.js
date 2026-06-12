@@ -212,12 +212,75 @@ var GameAudio = (function () {
 
   // ── Real music files (24 CC0 tracks, shuffled playlist) ─────────────────────
   var MUSIC_FILES = (function () {
-    var list = [];
-    for (var i = 1; i <= 18; i++) list.push('audio/music/theme-' + i + '.ogg');
-    list.push('audio/music/theme-6-short.ogg');
-    list.push('audio/music/Project_Utopia.ogg');
-    list.push('audio/music/358232_j_s_song.ogg');
-    list.push('audio/music/376737_Skullbeatz___Bad_Cat_Maste.ogg');
+    var list = [
+      'audio/music/358232_j_s_song.ogg',
+      'audio/music/376737_Skullbeatz___Bad_Cat_Maste.ogg',
+      'audio/music/Project_Utopia.ogg',
+      'audio/music/medieval-theme-1.ogg',
+      'audio/music/medieval-theme-2.ogg',
+      'audio/music/medieval-theme-3.ogg',
+      'audio/music/medieval-theme-4.ogg',
+      'audio/music/medieval-theme-5.ogg',
+      'audio/music/medieval-theme-6.ogg',
+      'audio/music/prehistoric-theme-1.ogg',
+      'audio/music/prehistoric-theme-2.ogg',
+      'audio/music/prehistoric-theme-3.ogg',
+      'audio/music/prehistoric-theme-4.ogg',
+      'audio/music/prehistoric-theme-5.ogg',
+      'audio/music/prehistoric-theme-6.ogg',
+      'audio/music/prehistoric-theme-7.ogg',
+      'audio/music/rpg-theme-1.ogg',
+      'audio/music/rpg-theme-10.ogg',
+      'audio/music/rpg-theme-11.ogg',
+      'audio/music/rpg-theme-12.ogg',
+      'audio/music/rpg-theme-13.ogg',
+      'audio/music/rpg-theme-14.ogg',
+      'audio/music/rpg-theme-15.ogg',
+      'audio/music/rpg-theme-16.ogg',
+      'audio/music/rpg-theme-2.ogg',
+      'audio/music/rpg-theme-3.ogg',
+      'audio/music/rpg-theme-4.ogg',
+      'audio/music/rpg-theme-5.ogg',
+      'audio/music/rpg-theme-6.ogg',
+      'audio/music/rpg-theme-7.ogg',
+      'audio/music/rpg-theme-8.ogg',
+      'audio/music/rpg-theme-9.ogg',
+      'audio/music/space-1.ogg',
+      'audio/music/space-2.ogg',
+      'audio/music/space-3.ogg',
+      'audio/music/space-4.ogg',
+      'audio/music/theme-1.ogg',
+      'audio/music/theme-10.ogg',
+      'audio/music/theme-11.ogg',
+      'audio/music/theme-12.ogg',
+      'audio/music/theme-13.ogg',
+      'audio/music/theme-14.ogg',
+      'audio/music/theme-15.ogg',
+      'audio/music/theme-16.ogg',
+      'audio/music/theme-17.ogg',
+      'audio/music/theme-18.ogg',
+      'audio/music/theme-2.ogg',
+      'audio/music/theme-3.ogg',
+      'audio/music/theme-4.ogg',
+      'audio/music/theme-5.ogg',
+      'audio/music/theme-6-short.ogg',
+      'audio/music/theme-6.ogg',
+      'audio/music/theme-7.ogg',
+      'audio/music/theme-8.ogg',
+      'audio/music/theme-9.ogg',
+      'audio/music/topdown-theme-1.ogg',
+      'audio/music/topdown-theme-2.ogg',
+      'audio/music/topdown-theme-3.ogg',
+      'audio/music/topdown-theme-4.ogg',
+      'audio/music/western-theme-1.ogg',
+      'audio/music/western-theme-2.ogg',
+      'audio/music/western-theme-3.ogg',
+      'audio/music/western-theme-4.ogg',
+      'audio/music/western-theme-5.ogg',
+      'audio/music/western-theme-6.ogg',
+      'audio/music/western-theme-7.ogg',
+      'audio/music/western-theme-8.ogg'
+    ];
     // Shuffle
     for (var j = list.length - 1; j > 0; j--) {
       var k = Math.floor(Math.random() * (j + 1));
@@ -282,6 +345,14 @@ var GameAudio = (function () {
     _musicPlaying = false;
     if (_musicTimer) { clearTimeout(_musicTimer); _musicTimer = null; }
     if (_musicEl) { try { _musicEl.pause(); } catch (e) {} _musicEl = null; }
+  }
+
+  // Skip to the next track (called e.g. on a new game day)
+  function nextTrack() {
+    if (_realMusicFailed || !_musicPlaying) return;
+    _trackIdx = (_trackIdx + 1) % MUSIC_FILES.length;
+    if (_musicEl) { try { _musicEl.pause(); } catch (e) {} _musicEl = null; }
+    _playRealTrack();
   }
 
   // ── Ambient city sounds ──────────────────────────────────────────────────────
@@ -363,6 +434,7 @@ var GameAudio = (function () {
     update: update,
     startMusic: startMusic,
     stopMusic: stopMusic,
+    nextTrack: nextTrack,
     setMuted: setMuted,
     playCoin: playCoin,
     playClick: playClick,

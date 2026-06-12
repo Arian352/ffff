@@ -17,6 +17,8 @@ var World = (function () {
   var _skyDay = null, _skyNight = null, _skyDawn = null;
   var _skyDayReady = false, _skyNightReady = false, _skyDawnReady = false;
   var _moonMesh = null;
+  var _globeMesh = null;
+  var _skyVariant = 0; // 0..2 — a different day sky each game day
 
   // Creates a Lambert material with a procedural fallback texture that is
   // swapped for the real photo texture once it finishes loading.
@@ -42,9 +44,27 @@ var World = (function () {
       var cl = new THREE.CubeTextureLoader();
       var order = ['posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg'];
       function cubeUrls(dir) { return order.map(function (f) { return 'textures/cube/' + dir + '/' + f; }); }
-      _skyDay   = cl.load(cubeUrls('day'),   function () { _skyDayReady = true; });
+      var dayDirs = ['day', 'day2', 'day3'];
+      _skyDay   = cl.load(cubeUrls(dayDirs[_skyVariant % dayDirs.length]), function () { _skyDayReady = true; });
       _skyNight = cl.load(cubeUrls('night'), function () { _skyNightReady = true; });
       _skyDawn  = cl.load(cubeUrls('dawn'),  function () { _skyDawnReady = true; });
+    } catch (e) {}
+  }
+
+  function buildGlobe() {
+    if (!_texLoader) return;
+    try {
+      var or = ROOM.office;
+      _texLoader.load('textures/planets/earth_atmos_2048.jpg', function (t) {
+        var mat = new THREE.MeshLambertMaterial({ map: t });
+        _globeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 20), mat);
+        _globeMesh.position.set(or.x + 0.6, 1.0, or.z - 2.3);
+        _scene.add(_globeMesh);
+        var stand = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.12, 10),
+          new THREE.MeshLambertMaterial({ color: 0x332211 }));
+        stand.position.set(or.x + 0.6, 0.88, or.z - 2.3);
+        _scene.add(stand);
+      });
     } catch (e) {}
   }
 
@@ -909,7 +929,7 @@ var World = (function () {
 
     // Scene
     _scene = new THREE.Scene();
-    _scene.fog = new THREE.FogExp2(0x9BB5C8, 0.015);
+    _scene.fog = new THREE.FogExp2(0xAFC3D6, 0.008);
     _scene.background = new THREE.Color(0x87CEEB);
 
     // Renderer — safe settings for Android WebView WebGL
@@ -938,6 +958,7 @@ var World = (function () {
     buildKitchen();
     buildOffice();
     buildMoon();
+    buildGlobe();
 
     // Resize handler
     window.addEventListener('resize', function () {
@@ -953,6 +974,7 @@ var World = (function () {
 
   // ── update ───────────────────────────────────────────────────────────────────
   function update(delta) {
+    if (_globeMesh) _globeMesh.rotation.y += delta * 0.4;
     // Gently flicker pendant lights
     var t = _clock ? _clock.getElapsedTime() : 0;
     _pendantLights.forEach(function(pl, i) {
@@ -1028,6 +1050,19 @@ var World = (function () {
     update: update,
     updateTimeOfDay: updateTimeOfDay,
     setCamera: function(cam) { _linkedCamera = cam; },
+    setSkyVariant: function(day) {
+      var v = Math.abs(day || 0) % 3;
+      if (v === _skyVariant) return;
+      _skyVariant = v;
+      try {
+        var cl = new THREE.CubeTextureLoader();
+        var order = ['posx.jpg','negx.jpg','posy.jpg','negy.jpg','posz.jpg','negz.jpg'];
+        var dirs = ['day','day2','day3'];
+        _skyDayReady = false;
+        _skyDay = cl.load(order.map(function(f){ return 'textures/cube/' + dirs[v] + '/' + f; }),
+          function(){ _skyDayReady = true; });
+      } catch(e) {}
+    },
     ROOM: ROOM,
     get colliders() { return _colliders; },
     get scene() { return _scene; },

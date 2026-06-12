@@ -23,6 +23,10 @@ var City = (function () {
         police_station:  { x: -18, y: 0, z: 30,  label: 'Police Station' },
         restaurant:      { x:   0, y: 0, z: -20, label: 'Restaurant' },
         street_north:    { x:   0, y: 0, z:  5,  label: 'Street North' },
+        market:          { x:   0, y: 0, z: 40,  label: 'Marktplatz' },
+        village_west:    { x: -22, y: 0, z: 35,  label: 'Dorf West' },
+        village_east:    { x:  22, y: 0, z: 35,  label: 'Dorf Ost' },
+        fountain:        { x:   0, y: 0, z: 40,  label: 'Brunnen' },
     };
 
     // Interior room X-offsets (far off screen so player can't see them normally)
@@ -656,6 +660,212 @@ var City = (function () {
         registerExit(ox, 5.5, 'apartments');
     }
 
+    // ── VILLAGE ───────────────────────────────────────────────────────────────
+    // Expands the city into a real village: houses, market square, paths,
+    // lamps and trees north of the cross street.
+
+    var villagePointLightCount = 0;
+    var VILLAGE_MAX_POINT_LIGHTS = 4;
+
+    // Single village house with gabled look (flat box + smaller darker roof
+    // box on top), door, two lit windows and a collision box.
+    // ry must be a multiple of PI/2 so the axis-aligned collider stays valid.
+    function buildVillageHouse(x, z, w, h, d, wallColor, roofColor, ry) {
+        var group = new THREE.Group();
+        group.position.set(x, 0, z);
+        if (ry) group.rotation.y = ry;
+
+        var wallMat = makeMat(wallColor);
+        var roofMat = makeMat(roofColor);
+
+        // Walls
+        group.add(makeBox(w, h, d, wallMat, 0, h / 2, 0));
+        // Roof base (flat overhanging box)
+        group.add(makeBox(w + 0.6, 0.4, d + 0.6, roofMat, 0, h + 0.2, 0));
+        // Smaller ridge box on top for the gabled look
+        group.add(makeBox(w * 0.55, 0.9, d * 0.55, roofMat, 0, h + 0.85, 0));
+
+        // Door (dark plane on the front face, +Z)
+        var doorMat = new THREE.MeshBasicMaterial({ color: 0x3a2410 });
+        var door = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.2), doorMat);
+        door.position.set(0, 1.1, d / 2 + 0.03);
+        group.add(door);
+
+        // Two lit windows (emissive-looking yellow planes)
+        var winMat = new THREE.MeshBasicMaterial({ color: 0xffdd66 });
+        var winL = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), winMat);
+        winL.position.set(-w / 2 + 1.1, h * 0.55, d / 2 + 0.03);
+        var winR = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), winMat);
+        winR.position.set(w / 2 - 1.1, h * 0.55, d / 2 + 0.03);
+        group.add(winL); group.add(winR);
+
+        scene.add(group);
+
+        // Collider (swap w/d when house is rotated 90 degrees)
+        var quarterTurn = ry && Math.abs(Math.abs(ry) - Math.PI / 2) < 0.01;
+        if (quarterTurn) {
+            addColliderBox(x, 0, z, d, h, w);
+        } else {
+            addColliderBox(x, 0, z, w, h, d);
+        }
+    }
+
+    // Village tree: trunk box + 1-2 green leaf boxes
+    function buildVillageTree(x, z, big) {
+        var trunkMat = makeMat(0x5c3d11);
+        var leafMat  = makeMat(big ? 0x1e7a1e : 0x2a8f2a);
+        scene.add(makeBox(0.45, big ? 3 : 2.2, 0.45, trunkMat, x, (big ? 3 : 2.2) / 2, z));
+        scene.add(makeBox(big ? 2.6 : 2.0, big ? 2.2 : 1.8, big ? 2.6 : 2.0, leafMat, x, (big ? 3 : 2.2) + 0.8, z));
+        if (big) {
+            scene.add(makeBox(1.6, 1.2, 1.6, makeMat(0x2a8f2a), x, 5.4, z));
+        }
+    }
+
+    // Street lamp; only the first VILLAGE_MAX_POINT_LIGHTS get a real
+    // PointLight, the rest are emissive-only heads (mobile GPU budget).
+    function buildVillageLamp(x, z) {
+        var poleMat = makeMat(0x444444);
+        var headMat = new THREE.MeshBasicMaterial({ color: 0xffeeaa });
+        scene.add(makeBox(0.18, 4.5, 0.18, poleMat, x, 2.25, z));
+        scene.add(makeBox(0.5, 0.5, 0.5, headMat, x, 4.6, z));
+        if (villagePointLightCount < VILLAGE_MAX_POINT_LIGHTS) {
+            villagePointLightCount++;
+            var light = new THREE.PointLight(0xffdd88, 0.8, 10);
+            light.position.set(x, 4.6, z);
+            scene.add(light);
+        }
+    }
+
+    // Market stall: 4 wooden posts + striped awning + table
+    function buildMarketStall(x, z, stripeColor) {
+        var postMat = makeMat(0x6a4a20);
+        var px, pz;
+        for (px = -1; px <= 1; px += 2) {
+            for (pz = -1; pz <= 1; pz += 2) {
+                scene.add(makeBox(0.15, 2.3, 0.15, postMat, x + px * 1.2, 1.15, z + pz * 0.9));
+            }
+        }
+        // Striped awning: alternating colored strips
+        var s;
+        for (s = 0; s < 4; s++) {
+            var stripeMat = makeMat(s % 2 === 0 ? stripeColor : 0xf0f0e8);
+            scene.add(makeBox(0.75, 0.15, 2.2, stripeMat, x - 1.125 + s * 0.75, 2.4, z));
+        }
+        // Table / counter
+        scene.add(makeBox(2.4, 0.8, 1.2, makeMat(0x8a6030), x, 0.4, z));
+        scene.add(makeBox(2.6, 0.08, 1.4, makeMat(0xa87840), x, 0.84, z));
+        // Goods on the table
+        scene.add(makeBox(0.5, 0.3, 0.4, makeMat(0xdd3322), x - 0.7, 1.0, z));
+        scene.add(makeBox(0.5, 0.3, 0.4, makeMat(0x33aa33), x + 0.1, 1.0, z));
+        scene.add(makeBox(0.4, 0.25, 0.35, makeMat(0xeecc44), x + 0.8, 1.0, z));
+        addColliderBox(x, 0, z, 2.6, 1.0, 1.4);
+    }
+
+    // Simple bench (seat + back + legs)
+    function buildVillageBench(x, z, ry) {
+        var benchMat = makeMat(0x7a5c2e);
+        var group = new THREE.Group();
+        group.position.set(x, 0, z);
+        if (ry) group.rotation.y = ry;
+        group.add(makeBox(2.2, 0.12, 0.6, benchMat, 0, 0.5, 0));
+        group.add(makeBox(2.2, 0.7, 0.1, benchMat, 0, 0.9, 0.28));
+        group.add(makeBox(0.12, 0.5, 0.5, makeMat(0x5a3c1a), -0.9, 0.25, 0));
+        group.add(makeBox(0.12, 0.5, 0.5, makeMat(0x5a3c1a),  0.9, 0.25, 0));
+        scene.add(group);
+    }
+
+    // Light gray ground path strip
+    function buildPathStrip(cx, cz, w, d) {
+        var pathMat = makeMat(0xb8b8ac);
+        scene.add(makeBox(w, 0.04, d, pathMat, cx, 0.03, cz));
+    }
+
+    function buildMarketSquare() {
+        // Cobblestone-colored square ground plane 16x16 around (0, 40)
+        var cobbleMat = makeMat(0x9a948a);
+        scene.add(makeBox(16, 0.08, 16, cobbleMat, 0, 0.05, 40));
+
+        // Stone fountain in the middle: cylinder base + smaller cylinder
+        var stoneMat = makeMat(0xc0c0c0);
+        var basin = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.0, 0.7, 12), stoneMat);
+        basin.position.set(0, 0.45, 40);
+        basin.castShadow = true;
+        basin.receiveShadow = true;
+        scene.add(basin);
+        var column = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.6, 10), makeMat(0xd0d0d0));
+        column.position.set(0, 1.4, 40);
+        column.castShadow = true;
+        scene.add(column);
+        // Water surface
+        var waterMat = new THREE.MeshBasicMaterial({ color: 0x66bbee, transparent: true, opacity: 0.8 });
+        var water = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 0.1, 12), waterMat);
+        water.position.set(0, 0.75, 40);
+        scene.add(water);
+        addColliderBox(0, 0, 40, 3.6, 1.6, 3.6);
+
+        // 3 market stalls (red/white, green/white, blue/white)
+        buildMarketStall(-5.5, 36.5, 0xdd2222);
+        buildMarketStall( 5.5, 36.5, 0x22aa44);
+        buildMarketStall(-5.5, 44.0, 0x2255cc);
+
+        // 2 benches facing the fountain
+        buildVillageBench( 4.5, 42.5, Math.PI);
+        buildVillageBench( 4.5, 44.5, Math.PI);
+    }
+
+    function buildVillage() {
+        // ── 10 village houses (X -30..30, Z 18..55), warm wall colors ─────────
+        // ry is a multiple of PI/2 so colliders stay axis-aligned.
+        var HALF_PI = Math.PI / 2;
+        buildVillageHouse(-28, 22, 6,   4.5, 5,   0xC8A878, 0x4a3424,  HALF_PI);
+        buildVillageHouse(-29, 42, 7,   5.5, 6,   0xB89868, 0x3e2c1c,  HALF_PI);
+        buildVillageHouse(-24, 52, 8,   6,   6,   0xD8C0A0, 0x503828,  0);
+        buildVillageHouse(-13, 47, 5,   4,   5,   0xA88858, 0x382818,  0);
+        buildVillageHouse(-12, 54, 6,   5,   5,   0xC8B088, 0x46342a, -HALF_PI);
+        buildVillageHouse( 13, 44, 6,   4.5, 5,   0xD0A878, 0x44301e, -HALF_PI);
+        buildVillageHouse( 27, 38, 7,   5.5, 6,   0xB89878, 0x3a2a1a, -HALF_PI);
+        buildVillageHouse( 28, 50, 8,   6,   6,   0xC8A060, 0x4a3422,  0);
+        buildVillageHouse( 15, 54, 5.5, 4.5, 5,   0xD8B890, 0x503a28,  0);
+        buildVillageHouse(-28, 32, 6,   5,   5.5, 0xB09060, 0x3c2c1c,  HALF_PI);
+
+        // ── Market square with fountain, stalls and benches ───────────────────
+        buildMarketSquare();
+
+        // ── Connecting paths (light gray ground strips) ───────────────────────
+        // Main street already reaches the square; side paths into the village:
+        buildPathStrip(-15, 35, 18, 2.5);   // west path (street -> Dorf West)
+        buildPathStrip( 15, 35, 18, 2.5);   // east path (street -> Dorf Ost)
+        buildPathStrip(-22, 44, 2.5, 20);   // west village lane (between houses)
+        buildPathStrip( 22, 44, 2.5, 14);   // east village lane
+        buildPathStrip(  0, 50, 2.5, 8);    // north lane from market square
+        buildPathStrip(-10, 50, 18, 2);     // northwest house connector
+        buildPathStrip( 14, 50, 14, 2);     // northeast house connector
+
+        // ── Street lamps (first 4 get real PointLights, rest emissive only) ───
+        buildVillageLamp(-7,  40);   // market square west (PointLight)
+        buildVillageLamp( 7,  40);   // market square east (PointLight)
+        buildVillageLamp(-15, 33.5); // west path (PointLight)
+        buildVillageLamp( 15, 33.5); // east path (PointLight)
+        buildVillageLamp(-22, 44);   // emissive only
+        buildVillageLamp( 22, 44);   // emissive only
+        buildVillageLamp(  0, 49);   // emissive only
+        buildVillageLamp(-10, 52);   // emissive only
+
+        // ── Trees scattered between the houses ────────────────────────────────
+        buildVillageTree(-24, 26, true);
+        buildVillageTree(-29, 47, false);
+        buildVillageTree(-18, 52, true);
+        buildVillageTree(-13, 38, false);
+        buildVillageTree(-10, 44, false);
+        buildVillageTree( 11, 38, true);
+        buildVillageTree( 12, 50, false);
+        buildVillageTree( 22, 33, false);
+        buildVillageTree( 28, 44, true);
+        buildVillageTree( 22, 54, false);
+        buildVillageTree(-26, 37, false);
+        buildVillageTree( 10, 32, false);
+    }
+
     // ── Public API ────────────────────────────────────────────────────────────
 
     function init(sceneRef, colliders) {
@@ -669,6 +879,7 @@ var City = (function () {
         buildPoliceStation();
         buildApartments();
         buildPark();
+        buildVillage();
 
         buildFrischmarktInterior();
         buildBaumarktInterior();

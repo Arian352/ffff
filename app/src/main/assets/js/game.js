@@ -793,6 +793,8 @@ const Game = (() => {
 
   function nextDay() {
     S.day++;
+    if (typeof GameAudio !== 'undefined' && GameAudio.nextTrack) { try { GameAudio.nextTrack(); } catch(e) {} }
+    if (typeof World !== 'undefined' && World.setSkyVariant) { try { World.setSkyVariant(S.day); } catch(e) {} }
     S.todayExpenses = 0;
     S.todayRevenue = 0;
     currentOrders = [];
