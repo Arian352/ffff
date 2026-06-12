@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Pizza slice pointing down -->
+    <group android:translateX="54" android:translateY="50">
+        <!-- Crust -->
+        <path
+            android:pathData="M-24,-16 A28,28 0 0,1 24,-16 L21,-11 A22,22 0 0,0 -21,-11 Z"
+            android:fillColor="#D98A3D"/>
+        <!-- Cheese body -->
+        <path
+            android:pathData="M-21,-11 A22,22 0 0,1 21,-11 L0,28 Z"
+            android:fillColor="#F5C542"/>
+        <!-- Sauce edge -->
+        <path
+            android:pathData="M-21,-11 A22,22 0 0,1 21,-11 L19,-7 A18,18 0 0,0 -19,-7 Z"
+            android:fillColor="#C73E1D"/>
+        <!-- Salami -->
+        <path android:pathData="M-8,-2 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" android:fillColor="#B5301F"/>
+        <path android:pathData="M9,0 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" android:fillColor="#B5301F"/>
+        <path android:pathData="M0,12 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" android:fillColor="#B5301F"/>
+        <!-- Basil -->
+        <path android:pathData="M3,-7 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" android:fillColor="#3E7C3A"/>
+        <path android:pathData="M-4,8 m-1.8,0 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0" android:fillColor="#3E7C3A"/>
+    </group>
+</vector>
